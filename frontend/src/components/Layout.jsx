@@ -2,7 +2,8 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FileText, ShoppingCart, Receipt, Database,
   AlertTriangle, Server, Bot, BarChart3, Users, ChevronRight,
-  Building2, Bell, Settings, HelpCircle, LogOut
+  Building2, Bell, Settings, HelpCircle, LogOut,
+  Scale, CreditCard, Calculator, FolderOpen, GitBranch, ScrollText
 } from 'lucide-react'
 
 const NAV = [
@@ -10,10 +11,18 @@ const NAV = [
   { to: '/purchase-requests',  icon: FileText,        label: 'Purchase Requests' },
   { to: '/purchase-orders',    icon: ShoppingCart,    label: 'Purchase Orders' },
   { to: '/invoices',           icon: Receipt,         label: 'Invoice Management' },
+  { to: '/matching',           icon: Scale,           label: 'Matching Engine' },
+  { to: '/payments',           icon: CreditCard,      label: 'Payments' },
+  { to: '/tds',                icon: Calculator,      label: 'TDS Management' },
   { label: 'divider' },
   { to: '/gst-cache',          icon: Database,        label: 'GST Cache',        badge: '3', badgeColor: 'yellow' },
   { to: '/msme',               icon: AlertTriangle,   label: 'MSME Compliance',  badge: '2', badgeColor: 'red' },
   { to: '/ebs',                icon: Server,          label: 'Oracle EBS Sync',  badge: '1', badgeColor: 'red' },
+  { label: 'divider' },
+  { to: '/workflow',           icon: GitBranch,       label: 'Workflow' },
+  { to: '/documents',          icon: FolderOpen,      label: 'Documents' },
+  { to: '/notifications',      icon: Bell,            label: 'Notifications' },
+  { to: '/audit',              icon: ScrollText,      label: 'Audit Trail' },
   { label: 'divider' },
   { to: '/ai-agents',          icon: Bot,             label: 'AI Agents' },
   { to: '/analytics',          icon: BarChart3,       label: 'Spend Analytics' },
@@ -33,7 +42,7 @@ export default function Layout() {
             </div>
             <div>
               <div className="text-white font-semibold text-sm leading-tight">IDFC FIRST Bank</div>
-              <div className="text-gray-400 text-xs">P2P Platform · Prototype</div>
+              <div className="text-gray-400 text-xs">P2P Platform</div>
             </div>
           </div>
         </div>
@@ -96,12 +105,12 @@ export default function Layout() {
           </div>
           <div className="flex items-center gap-3">
             <div className="text-xs text-gray-400 bg-gray-100 rounded-full px-3 py-1">
-              🟢 All systems operational
+              All systems operational
             </div>
-            <button className="relative p-2 text-gray-500 hover:text-gray-700">
+            <NavLink to="/notifications" className="relative p-2 text-gray-500 hover:text-gray-700">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            </NavLink>
           </div>
         </header>
 
