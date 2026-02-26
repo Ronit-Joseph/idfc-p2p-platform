@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: p2p-postgres
+    environment:
+      POSTGRES_DB: p2p
+      POSTGRES_USER: p2p
+      POSTGRES_PASSWORD: p2p
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:

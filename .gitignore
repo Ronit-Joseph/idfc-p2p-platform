@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 .env
 .vite/
+*.db
+.claude/
+_plan_output.md
