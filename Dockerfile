@@ -10,5 +10,6 @@ COPY frontend/dist/ ./frontend/dist/
 
 EXPOSE 10000
 
-WORKDIR /app/backend
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
+# Run from project root so "from backend.modules..." imports work
+WORKDIR /app
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "10000"]
