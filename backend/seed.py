@@ -35,6 +35,13 @@ from backend.modules.gst_cache.models import GSTRecord, GSTSyncLog
 from backend.modules.ebs_integration.models import EBSEvent
 from backend.modules.ai_agents.models import AIInsight, AgentConfig
 from backend.modules.vendor_portal.models import VendorPortalEvent
+from backend.modules.workflow.models import ApprovalMatrix, ApprovalInstance, ApprovalStep
+from backend.modules.matching.models import MatchResult, MatchingException
+from backend.modules.notifications.models import Notification
+from backend.modules.audit.models import AuditLog
+from backend.modules.payments.models import Payment, PaymentRun
+from backend.modules.tds.models import TDSDeduction
+from backend.modules.documents.models import Document
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -1887,6 +1894,88 @@ def build_vendor_portal_events() -> list[VendorPortalEvent]:
     ]
 
 
+def build_approval_matrices() -> list[ApprovalMatrix]:
+    """Approval matrix rules for PR, PO, and Invoice workflows."""
+    return [
+        # PR approvals
+        ApprovalMatrix(id=_id(), entity_type="PR", department=None, category=None,
+                       min_amount=0, max_amount=500000, approver_role="DEPARTMENT_HEAD", level=1, is_active=True),
+        ApprovalMatrix(id=_id(), entity_type="PR", department=None, category=None,
+                       min_amount=500001, max_amount=5000000, approver_role="DEPARTMENT_HEAD", level=1, is_active=True),
+        ApprovalMatrix(id=_id(), entity_type="PR", department=None, category=None,
+                       min_amount=500001, max_amount=5000000, approver_role="FINANCE_HEAD", level=2, is_active=True),
+        ApprovalMatrix(id=_id(), entity_type="PR", department=None, category=None,
+                       min_amount=5000001, max_amount=100000000, approver_role="DEPARTMENT_HEAD", level=1, is_active=True),
+        ApprovalMatrix(id=_id(), entity_type="PR", department=None, category=None,
+                       min_amount=5000001, max_amount=100000000, approver_role="FINANCE_HEAD", level=2, is_active=True),
+        ApprovalMatrix(id=_id(), entity_type="PR", department=None, category=None,
+                       min_amount=5000001, max_amount=100000000, approver_role="ADMIN", level=3, is_active=True),
+        # Invoice approvals
+        ApprovalMatrix(id=_id(), entity_type="INVOICE", department=None, category=None,
+                       min_amount=0, max_amount=1000000, approver_role="PROCUREMENT_MANAGER", level=1, is_active=True),
+        ApprovalMatrix(id=_id(), entity_type="INVOICE", department=None, category=None,
+                       min_amount=1000001, max_amount=100000000, approver_role="PROCUREMENT_MANAGER", level=1, is_active=True),
+        ApprovalMatrix(id=_id(), entity_type="INVOICE", department=None, category=None,
+                       min_amount=1000001, max_amount=100000000, approver_role="FINANCE_HEAD", level=2, is_active=True),
+    ]
+
+
+def build_notifications() -> list[Notification]:
+    """Sample notifications for the dev user."""
+    return [
+        Notification(id=_id(), user_id=USER_IDS["priya"], notification_type="MSME_ALERT", severity="CRITICAL",
+                     title="MSME Payment Breached — INV005",
+                     message="Mumbai Print House (MICRO) — Section 43B(h) 45-day limit breached. Penalty accruing at ₹3,326.",
+                     link="/msme"),
+        Notification(id=_id(), user_id=USER_IDS["priya"], notification_type="FRAUD_WARNING", severity="WARNING",
+                     title="Invoice Blocked — INV006",
+                     message="Fraud Detection Agent auto-blocked INV006 from Suresh Traders. Multiple anomalies detected.",
+                     link="/invoices"),
+        Notification(id=_id(), user_id=USER_IDS["priya"], notification_type="APPROVAL_REQUEST", severity="INFO",
+                     title="PR Pending Approval — PR2024-005",
+                     message="Marketing Collateral printing request from Vikram Patel. Amount: ₹7.5L.",
+                     link="/purchase-requests"),
+        Notification(id=_id(), user_id=USER_IDS["priya"], notification_type="EBS_FAILURE", severity="WARNING",
+                     title="EBS Posting Failed — EBS007",
+                     message="GL Journal posting failed for FA_ADDITION event. Retry required.",
+                     link="/ebs"),
+        Notification(id=_id(), user_id=USER_IDS["amit"], notification_type="APPROVAL_REQUEST", severity="INFO",
+                     title="PR Pending Approval — PR2024-006",
+                     message="Cloud Infrastructure AWS Reserved Instances. Amount: ₹1.8Cr. Awaiting TECH department head approval.",
+                     link="/purchase-requests"),
+        Notification(id=_id(), user_id=USER_IDS["sunita"], notification_type="GST_ISSUE", severity="WARNING",
+                     title="GST Compliance — Gujarat Tech Solutions",
+                     message="GSTR-1 filing delayed. GSTR-2B for Jan 2025 not yet available. Monitor ITC eligibility.",
+                     link="/gst-cache"),
+    ]
+
+
+def build_documents() -> list[Document]:
+    """Sample document metadata records."""
+    return [
+        Document(id=_id(), entity_type="INVOICE", entity_id="INV001", document_type="INVOICE_PDF",
+                 file_name="INV001_TechMahindra_Jan2025.pdf", file_size=245000, mime_type="application/pdf",
+                 storage_type="LOCAL", storage_path="/documents/INVOICE/INV001/INV001_TechMahindra_Jan2025.pdf",
+                 version=1, uploaded_by="Sunita Rao", description="Original invoice from TechMahindra for IT infrastructure"),
+        Document(id=_id(), entity_type="INVOICE", entity_id="INV002", document_type="INVOICE_PDF",
+                 file_name="INV002_RajeshOffice_Jan2025.pdf", file_size=128000, mime_type="application/pdf",
+                 storage_type="LOCAL", storage_path="/documents/INVOICE/INV002/INV002_RajeshOffice_Jan2025.pdf",
+                 version=1, uploaded_by="Sunita Rao", description="MSME invoice for office supplies"),
+        Document(id=_id(), entity_type="PO", entity_id="PO2024-001", document_type="PO_COPY",
+                 file_name="PO2024-001_signed.pdf", file_size=340000, mime_type="application/pdf",
+                 storage_type="LOCAL", storage_path="/documents/PO/PO2024-001/PO2024-001_signed.pdf",
+                 version=1, uploaded_by="Amit Sharma", description="Signed PO for annual IT infrastructure upgrade"),
+        Document(id=_id(), entity_type="GRN", entity_id="GRN2024-001", document_type="GRN_PHOTO",
+                 file_name="GRN2024-001_delivery_photo.jpg", file_size=890000, mime_type="image/jpeg",
+                 storage_type="LOCAL", storage_path="/documents/GRN/GRN2024-001/GRN2024-001_delivery_photo.jpg",
+                 version=1, uploaded_by="Amit Sharma", description="Delivery confirmation photo for servers"),
+        Document(id=_id(), entity_type="SUPPLIER", entity_id="SUP001", document_type="TAX_CERTIFICATE",
+                 file_name="SUP001_GST_Certificate.pdf", file_size=156000, mime_type="application/pdf",
+                 storage_type="LOCAL", storage_path="/documents/SUPPLIER/SUP001/SUP001_GST_Certificate.pdf",
+                 version=1, uploaded_by="System", description="TechMahindra GST registration certificate"),
+    ]
+
+
 # ===================================================================
 # MAIN SEED FUNCTION
 # ===================================================================
@@ -1969,6 +2058,21 @@ async def seed():
         vpe = build_vendor_portal_events()
         session.add_all(vpe)
         print(f"  + {len(vpe)} vendor portal events")
+
+        # ── Approval Matrices ─────────────────────────────────
+        matrices = build_approval_matrices()
+        session.add_all(matrices)
+        print(f"  + {len(matrices)} approval matrix rules")
+
+        # ── Notifications ─────────────────────────────────────
+        notifications = build_notifications()
+        session.add_all(notifications)
+        print(f"  + {len(notifications)} notifications")
+
+        # ── Documents ─────────────────────────────────────────
+        docs = build_documents()
+        session.add_all(docs)
+        print(f"  + {len(docs)} document records")
 
         # ── Commit ─────────────────────────────────────────────
         await session.commit()

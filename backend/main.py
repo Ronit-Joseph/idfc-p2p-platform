@@ -1,11 +1,11 @@
 """
-IDFC P2P Platform — App Factory (v0.4.0)
+IDFC P2P Platform — App Factory (v0.5.0)
 =========================================
 
-Fully DB-backed modular monolith.  Every endpoint reads from
-PostgreSQL / SQLite — no in-memory prototype data remains.
+Enterprise-grade modular monolith with full P2P lifecycle coverage.
+Every endpoint reads from PostgreSQL / SQLite.
 
-Module routers (mounted directly):
+Module routers (mounted directly — 14 routers):
   - /api/auth               → backend.modules.auth.routes
   - /api/suppliers          → backend.modules.suppliers.routes
   - /api/budgets            → backend.modules.budgets.routes
@@ -13,6 +13,13 @@ Module routers (mounted directly):
   - /api/purchase-orders    → backend.modules.purchase_orders.routes
   - /api/invoices           → backend.modules.invoices.routes
   - /api/vendor-portal      → backend.modules.vendor_portal.routes
+  - /api/workflow           → backend.modules.workflow.routes
+  - /api/audit              → backend.modules.audit.routes
+  - /api/notifications      → backend.modules.notifications.routes
+  - /api/matching           → backend.modules.matching.routes
+  - /api/payments           → backend.modules.payments.routes
+  - /api/tds                → backend.modules.tds.routes
+  - /api/documents          → backend.modules.documents.routes
 
 Legacy-compatible wrappers (call module services, format for frontend):
   - /api/dashboard          → aggregation across all modules
@@ -45,7 +52,7 @@ from backend.dependencies import get_db
 from backend.event_bus import Event, event_bus
 from backend.exceptions import register_exception_handlers
 
-# ── Module routers (mounted directly) ─────────────────────────────
+# ── Module routers (mounted directly — 14 routers) ──────────────────
 from backend.modules.auth.routes import router as auth_router
 from backend.modules.suppliers.routes import router as suppliers_router
 from backend.modules.budgets.routes import router as budgets_router
@@ -53,6 +60,13 @@ from backend.modules.purchase_requests.routes import router as pr_router
 from backend.modules.purchase_orders.routes import router as po_router
 from backend.modules.invoices.routes import router as invoices_router
 from backend.modules.vendor_portal.routes import router as vp_router
+from backend.modules.workflow.routes import router as workflow_router
+from backend.modules.audit.routes import router as audit_router
+from backend.modules.notifications.routes import router as notifications_router
+from backend.modules.matching.routes import router as matching_router
+from backend.modules.payments.routes import router as payments_router
+from backend.modules.tds.routes import router as tds_router
+from backend.modules.documents.routes import router as documents_router
 
 # ── Module services (for legacy-compat wrapper endpoints) ──────────
 from backend.modules.gst_cache import service as gst_service
@@ -60,6 +74,7 @@ from backend.modules.msme_compliance import service as msme_service
 from backend.modules.ebs_integration import service as ebs_service
 from backend.modules.ai_agents import service as ai_service
 from backend.modules.analytics import service as analytics_service
+from backend.modules.audit import service as audit_service
 
 # ── DB models (for dashboard & cross-module queries) ───────────────
 from backend.modules.budgets.models import Budget
@@ -70,6 +85,15 @@ from backend.modules.invoices.models import Invoice
 from backend.modules.ebs_integration.models import EBSEvent
 from backend.modules.gst_cache.models import GSTRecord, GSTSyncLog
 from backend.modules.ai_agents.models import AIInsight
+
+# ── Import new models so Base.metadata.create_all picks them up ─────
+from backend.modules.workflow.models import ApprovalMatrix, ApprovalInstance, ApprovalStep  # noqa: F401
+from backend.modules.matching.models import MatchResult, MatchingException  # noqa: F401
+from backend.modules.notifications.models import Notification  # noqa: F401
+from backend.modules.audit.models import AuditLog  # noqa: F401
+from backend.modules.payments.models import Payment, PaymentRun  # noqa: F401
+from backend.modules.tds.models import TDSDeduction  # noqa: F401
+from backend.modules.documents.models import Document  # noqa: F401
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -103,6 +127,25 @@ async def _log_event(event: Event) -> None:
     _logger.info("EVENT %s: %s", event.name, event.data)
 
 
+async def _audit_event(event: Event) -> None:
+    """Persist every event bus message to the audit_logs table."""
+    from backend.database import async_session
+    try:
+        async with async_session() as db:
+            await audit_service.log_event(
+                db,
+                event_type=event.name,
+                source_module=event.source,
+                entity_type=event.data.get("entity_type"),
+                entity_id=event.data.get("entity_id") or event.data.get("invoice_id")
+                         or event.data.get("run_number"),
+                actor=event.data.get("approver") or event.data.get("resolved_by"),
+                payload=event.data,
+            )
+    except Exception:
+        _logger.exception("Failed to persist audit log for event %s", event.name)
+
+
 # ─────────────────────────────────────────────────────────────────
 # Lifespan
 # ─────────────────────────────────────────────────────────────────
@@ -113,12 +156,24 @@ async def lifespan(app: FastAPI):
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-    for event_name in [
+    # Subscribe all event names to logging + audit persistence
+    _all_events = [
         "pr.created", "pr.approved", "pr.rejected",
         "invoice.approved", "invoice.rejected",
         "ebs.event_retried", "ai.insight_applied",
-    ]:
+        "workflow.approval_requested", "workflow.step_approved",
+        "workflow.pr_approved", "workflow.pr_rejected",
+        "workflow.po_approved", "workflow.po_rejected",
+        "workflow.invoice_approved", "workflow.invoice_rejected",
+        "matching.passed", "matching.exception", "matching.blocked_fraud",
+        "matching.exception_resolved",
+        "payment.run_created", "payment.run_scheduled",
+        "payment.run_processing", "payment.run_completed",
+        "tds.deduction_created", "tds.deposited",
+    ]
+    for event_name in _all_events:
         event_bus.subscribe(event_name, _log_event)
+        event_bus.subscribe(event_name, _audit_event)
 
     yield
 
@@ -129,7 +184,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="IDFC P2P Platform API",
-    version="0.4.0",
+    version="0.5.0",
     lifespan=lifespan,
     docs_url="/docs" if settings.ENABLE_DOCS else None,
     redoc_url="/redoc" if settings.ENABLE_DOCS else None,
@@ -146,7 +201,7 @@ app.add_middleware(
 register_exception_handlers(app)
 
 
-# ── Mount module routers ──────────────────────────────────────────
+# ── Mount module routers (14 total) ───────────────────────────────
 app.include_router(auth_router)
 app.include_router(suppliers_router)
 app.include_router(budgets_router)
@@ -154,6 +209,13 @@ app.include_router(pr_router)
 app.include_router(po_router)
 app.include_router(invoices_router)
 app.include_router(vp_router)
+app.include_router(workflow_router)
+app.include_router(audit_router)
+app.include_router(notifications_router)
+app.include_router(matching_router)
+app.include_router(payments_router)
+app.include_router(tds_router)
+app.include_router(documents_router)
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -164,13 +226,17 @@ app.include_router(vp_router)
 def health():
     return {
         "status": "ok",
-        "version": "0.4.0",
-        "services": {
-            "supplier_service": "UP", "pr_po_service": "UP",
-            "invoice_service": "UP", "gst_sync_service": "UP",
-            "matching_engine": "UP", "workflow_engine": "UP",
-            "payment_engine": "UP", "ebs_adapter": "UP",
-            "ai_orchestrator": "UP",
+        "version": "0.5.0",
+        "modules": {
+            "auth": "UP", "suppliers": "UP", "budgets": "UP",
+            "purchase_requests": "UP", "purchase_orders": "UP",
+            "invoices": "UP", "matching_engine": "UP",
+            "workflow_engine": "UP", "payments": "UP",
+            "tds_management": "UP", "documents": "UP",
+            "audit_trail": "UP", "notifications": "UP",
+            "gst_cache": "UP", "ebs_adapter": "UP",
+            "ai_orchestrator": "UP", "analytics": "UP",
+            "vendor_portal": "UP", "msme_compliance": "UP",
         },
         "integrations": {
             "oracle_ebs": "CONNECTED (AP, GL, FA)",
