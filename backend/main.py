@@ -2,37 +2,53 @@
 IDFC P2P Platform — App Factory
 ================================
 
-Modular monolith: mounts DB-backed module routers (auth, suppliers, ...)
-alongside a legacy compatibility layer that preserves all prototype endpoints
-so the frontend never breaks during migration.
+Modular monolith: mounts DB-backed module routers alongside a legacy
+compatibility layer that preserves all prototype endpoints so the
+frontend never breaks during migration.
 
-Migrated modules:
-  - /api/auth       → backend.modules.auth.routes    (JWT, DB-backed)
-  - /api/suppliers   → backend.modules.suppliers.routes (DB-backed)
+Migrated modules (DB-backed):
+  - /api/auth              → backend.modules.auth.routes
+  - /api/suppliers         → backend.modules.suppliers.routes
+  - /api/budgets           → backend.modules.budgets.routes
+  - /api/purchase-requests → backend.modules.purchase_requests.routes
+  - /api/purchase-orders   → backend.modules.purchase_orders.routes
 
 Legacy (in-memory, will be migrated in future sprints):
-  - /api/dashboard, /api/purchase-requests, /api/purchase-orders,
-    /api/invoices, /api/gst-cache, /api/msme-compliance,
+  - /api/dashboard (hybrid — DB for migrated modules, in-memory for rest)
+  - /api/invoices, /api/gst-cache, /api/msme-compliance,
     /api/oracle-ebs/events, /api/ai-agents/insights,
-    /api/vendor-portal/events, /api/analytics/spend, /api/budgets
+    /api/vendor-portal/events, /api/analytics/spend
 """
 
 from contextlib import asynccontextmanager
 import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.config import settings
 from backend.database import engine
 from backend.base_model import Base
+from backend.dependencies import get_db
+from backend.event_bus import Event, event_bus
 from backend.exceptions import register_exception_handlers
 
 # ── Module routers (DB-backed) ───────────────────────────────────
 from backend.modules.auth.routes import router as auth_router
 from backend.modules.suppliers.routes import router as suppliers_router
+from backend.modules.budgets.routes import router as budgets_router
+from backend.modules.purchase_requests.routes import router as pr_router
+from backend.modules.purchase_orders.routes import router as po_router
+
+# ── DB models needed by the hybrid dashboard ─────────────────────
+from backend.modules.budgets.models import Budget
+from backend.modules.purchase_requests.models import PurchaseRequest
+from backend.modules.purchase_orders.models import PurchaseOrder
+from backend.modules.suppliers.models import Supplier
 
 
 # ─────────────────────────────────────────────
@@ -40,7 +56,6 @@ from backend.modules.suppliers.routes import router as suppliers_router
 # Kept verbatim until each module is migrated.
 # ─────────────────────────────────────────────
 
-from pydantic import BaseModel as PydanticBaseModel
 from typing import List, Optional, Any, Dict
 from datetime import datetime, timedelta
 import random
@@ -60,7 +75,7 @@ def past(days=0):
     return d.strftime("%Y-%m-%d")
 
 
-# ── Synthetic data (prototype) ────────────────────────────────────
+# ── Suppliers (kept for get_supplier() in invoice legacy endpoints) ──
 
 SUPPLIERS = [
     {"id": "SUP001", "code": "SUP001", "legal_name": "TechMahindra Solutions Pvt Ltd",
@@ -168,189 +183,6 @@ SUPPLIERS = [
      "payment_terms": 30, "risk_score": 1.7, "status": "ACTIVE",
      "vendor_portal_status": "VERIFIED", "contact_email": "billing@compassindia.com",
      "onboarded_date": past(280), "last_synced_from_portal": ts(7)},
-]
-
-BUDGETS = [
-    {"dept": "TECH", "dept_name": "Technology", "gl_account": "6100",
-     "cost_center": "CC-TECH-01", "fiscal_year": "FY2024-25",
-     "total": 80000000, "committed": 22000000, "actual": 30000000,
-     "available": 28000000, "currency": "INR"},
-    {"dept": "OPS", "dept_name": "Operations", "gl_account": "6200",
-     "cost_center": "CC-OPS-01", "fiscal_year": "FY2024-25",
-     "total": 40000000, "committed": 8000000, "actual": 12000000,
-     "available": 20000000, "currency": "INR"},
-    {"dept": "FIN", "dept_name": "Finance", "gl_account": "6300",
-     "cost_center": "CC-FIN-01", "fiscal_year": "FY2024-25",
-     "total": 30000000, "committed": 5000000, "actual": 10500000,
-     "available": 14500000, "currency": "INR"},
-    {"dept": "MKT", "dept_name": "Marketing", "gl_account": "6400",
-     "cost_center": "CC-MKT-01", "fiscal_year": "FY2024-25",
-     "total": 20000000, "committed": 4000000, "actual": 8000000,
-     "available": 8000000, "currency": "INR"},
-    {"dept": "HR", "dept_name": "Human Resources", "gl_account": "6500",
-     "cost_center": "CC-HR-01", "fiscal_year": "FY2024-25",
-     "total": 10000000, "committed": 1500000, "actual": 2500000,
-     "available": 6000000, "currency": "INR"},
-    {"dept": "ADMIN", "dept_name": "Administration", "gl_account": "6600",
-     "cost_center": "CC-ADMIN-01", "fiscal_year": "FY2024-25",
-     "total": 15000000, "committed": 3000000, "actual": 8000000,
-     "available": 4000000, "currency": "INR"},
-]
-
-PURCHASE_REQUESTS = [
-    {"id": "PR2024-001", "title": "Cloud Infrastructure Upgrade - AWS MSK & EKS", "department": "TECH",
-     "requester": "Amit Sharma", "requester_email": "amit.sharma@idfc.com",
-     "amount": 4500000, "currency": "INR", "gl_account": "6100-003",
-     "cost_center": "CC-TECH-01", "category": "IT Services", "supplier_preference": "SUP001",
-     "justification": "Upgrade AWS MSK Kafka cluster and EKS nodes for P2P platform Phase 0",
-     "status": "PO_CREATED", "po_id": "PO2024-001",
-     "budget_check": "APPROVED", "budget_available_at_time": 32500000,
-     "created_at": ts(20), "approved_at": ts(18), "approver": "Priya Menon",
-     "items": [{"desc": "AWS MSK Setup & Configuration", "qty": 1, "unit": "LS", "unit_price": 2500000},
-               {"desc": "EKS Node Scaling", "qty": 1, "unit": "LS", "unit_price": 2000000}]},
-    {"id": "PR2024-002", "title": "Annual Office Stationery - Q3 FY25", "department": "ADMIN",
-     "requester": "Sunita Rao", "requester_email": "sunita.rao@idfc.com",
-     "amount": 185000, "currency": "INR", "gl_account": "6600-001",
-     "cost_center": "CC-ADMIN-01", "category": "Office Supplies", "supplier_preference": "SUP003",
-     "justification": "Quarterly stationery replenishment for HO and branches",
-     "status": "PO_CREATED", "po_id": "PO2024-002",
-     "budget_check": "APPROVED", "budget_available_at_time": 4185000,
-     "created_at": ts(15), "approved_at": ts(13), "approver": "Rohan Joshi",
-     "items": [{"desc": "A4 Paper Reams (75 GSM)", "qty": 200, "unit": "REAM", "unit_price": 350},
-               {"desc": "Ballpoint Pens (Box)", "qty": 50, "unit": "BOX", "unit_price": 450},
-               {"desc": "File Folders", "qty": 300, "unit": "PCS", "unit_price": 125},
-               {"desc": "Whiteboard Markers", "qty": 100, "unit": "PCS", "unit_price": 80},
-               {"desc": "Sticky Notes (Pack)", "qty": 200, "unit": "PACK", "unit_price": 85}]},
-    {"id": "PR2024-003", "title": "Security Audit & Penetration Testing FY25", "department": "FIN",
-     "requester": "Kiran Patel", "requester_email": "kiran.patel@idfc.com",
-     "amount": 2800000, "currency": "INR", "gl_account": "6300-005",
-     "cost_center": "CC-FIN-01", "category": "Consulting", "supplier_preference": "SUP008",
-     "justification": "Annual RBI-mandated IS audit and penetration testing for core banking and P2P platforms",
-     "status": "APPROVED", "po_id": None,
-     "budget_check": "APPROVED", "budget_available_at_time": 14500000,
-     "created_at": ts(5), "approved_at": ts(3), "approver": "Sneha Krishnaswamy",
-     "items": [{"desc": "IS Audit & Gap Assessment", "qty": 1, "unit": "LS", "unit_price": 1500000},
-               {"desc": "Penetration Testing (External & Internal)", "qty": 1, "unit": "LS", "unit_price": 800000},
-               {"desc": "Compliance Report & Recommendations", "qty": 1, "unit": "LS", "unit_price": 500000}]},
-    {"id": "PR2024-004", "title": "Canteen & Pantry Supplies - Sep 2024", "department": "ADMIN",
-     "requester": "Deepak Nair", "requester_email": "deepak.nair@idfc.com",
-     "amount": 95000, "currency": "INR", "gl_account": "6600-002",
-     "cost_center": "CC-ADMIN-01", "category": "Facilities Management", "supplier_preference": "SUP006",
-     "justification": "Monthly canteen and pantry consumables",
-     "status": "PENDING_APPROVAL", "po_id": None,
-     "budget_check": "APPROVED", "budget_available_at_time": 3815000,
-     "created_at": ts(2), "approved_at": None, "approver": None,
-     "items": [{"desc": "Tea / Coffee Supplies", "qty": 20, "unit": "KG", "unit_price": 1200},
-               {"desc": "Snacks & Biscuits", "qty": 50, "unit": "KG", "unit_price": 850},
-               {"desc": "Cleaning Supplies", "qty": 1, "unit": "LS", "unit_price": 22500},
-               {"desc": "Pantry Consumables", "qty": 1, "unit": "LS", "unit_price": 35500}]},
-    {"id": "PR2024-005", "title": "Brand Collateral Print - Diwali Campaign", "department": "MKT",
-     "requester": "Neha Gupta", "requester_email": "neha.gupta@idfc.com",
-     "amount": 320000, "currency": "INR", "gl_account": "6400-003",
-     "cost_center": "CC-MKT-01", "category": "Printing & Marketing", "supplier_preference": "SUP007",
-     "justification": "Diwali customer mailers, standees and in-branch display material",
-     "status": "PENDING_APPROVAL", "po_id": None,
-     "budget_check": "APPROVED", "budget_available_at_time": 7900000,
-     "created_at": ts(1), "approved_at": None, "approver": None,
-     "items": [{"desc": "Mailer Booklets (A5 size)", "qty": 5000, "unit": "PCS", "unit_price": 28},
-               {"desc": "Standees (6ft x 2ft)", "qty": 200, "unit": "PCS", "unit_price": 850},
-               {"desc": "Carry Bags (Branded)", "qty": 2000, "unit": "PCS", "unit_price": 35}]},
-    {"id": "PR2024-006", "title": "HR Training Platform License FY25", "department": "HR",
-     "requester": "Ananya Singh", "requester_email": "ananya.singh@idfc.com",
-     "amount": 680000, "currency": "INR", "gl_account": "6500-001",
-     "cost_center": "CC-HR-01", "category": "IT Services", "supplier_preference": "SUP010",
-     "justification": "Annual license for LMS platform used for employee upskilling",
-     "status": "APPROVED", "po_id": None,
-     "budget_check": "APPROVED", "budget_available_at_time": 5800000,
-     "created_at": ts(8), "approved_at": ts(6), "approver": "Varun Mehta",
-     "items": [{"desc": "LMS Enterprise License (500 seats)", "qty": 1, "unit": "YEAR", "unit_price": 580000},
-               {"desc": "Implementation & Configuration", "qty": 1, "unit": "LS", "unit_price": 100000}]},
-    {"id": "PR2024-007", "title": "Data Center Rack Space & Power - Q4", "department": "TECH",
-     "requester": "Vijay Reddy", "requester_email": "vijay.reddy@idfc.com",
-     "amount": 1250000, "currency": "INR", "gl_account": "6100-005",
-     "cost_center": "CC-TECH-01", "category": "IT Services", "supplier_preference": "SUP013",
-     "justification": "Co-location rack space expansion for P2P platform infrastructure",
-     "status": "REJECTED", "po_id": None,
-     "budget_check": "APPROVED", "budget_available_at_time": 28000000,
-     "created_at": ts(10), "approved_at": None, "approver": "Priya Menon",
-     "rejection_reason": "Evaluate AWS GovCloud option first — submit revised PR after cloud assessment",
-     "rejected_at": ts(8),
-     "items": [{"desc": "Rack Space (10U)", "qty": 4, "unit": "QUARTER", "unit_price": 175000},
-               {"desc": "Power & Cooling", "qty": 4, "unit": "QUARTER", "unit_price": 137500}]},
-    {"id": "PR2024-008", "title": "Consulting: P2P Change Management", "department": "OPS",
-     "requester": "Meera Iyer", "requester_email": "meera.iyer@idfc.com",
-     "amount": 1800000, "currency": "INR", "gl_account": "6200-004",
-     "cost_center": "CC-OPS-01", "category": "Consulting", "supplier_preference": "SUP014",
-     "justification": "Change management consulting for Oracle EBS to P2P transition",
-     "status": "PO_CREATED", "po_id": "PO2024-003",
-     "budget_check": "APPROVED", "budget_available_at_time": 20000000,
-     "created_at": ts(25), "approved_at": ts(22), "approver": "Rohan Joshi",
-     "items": [{"desc": "Change Impact Assessment", "qty": 1, "unit": "LS", "unit_price": 600000},
-               {"desc": "Training Design & Delivery", "qty": 1, "unit": "LS", "unit_price": 800000},
-               {"desc": "Hypercare Support (3 months)", "qty": 3, "unit": "MONTH", "unit_price": 133333}]},
-]
-
-PURCHASE_ORDERS = [
-    {"id": "PO2024-001", "pr_id": "PR2024-001",
-     "supplier_id": "SUP001", "supplier_name": "TechMahindra Solutions Pvt Ltd",
-     "po_number": "PO2024-001", "amount": 4500000, "currency": "INR",
-     "status": "RECEIVED", "delivery_date": past(5), "dispatch_date": ts(18),
-     "acknowledged_date": ts(16), "grn_id": "GRN2024-001",
-     "ebs_commitment_status": "POSTED", "ebs_commitment_ref": "EBS-GL-45823",
-     "items": [{"desc": "AWS MSK Setup & Configuration", "qty": 1, "unit": "LS",
-                "unit_price": 2500000, "total": 2500000, "grn_qty": 1},
-               {"desc": "EKS Node Scaling", "qty": 1, "unit": "LS",
-                "unit_price": 2000000, "total": 2000000, "grn_qty": 1}]},
-    {"id": "PO2024-002", "pr_id": "PR2024-002",
-     "supplier_id": "SUP003", "supplier_name": "Rajesh Office Suppliers",
-     "po_number": "PO2024-002", "amount": 185000, "currency": "INR",
-     "status": "PARTIALLY_RECEIVED", "delivery_date": future(3), "dispatch_date": ts(13),
-     "acknowledged_date": ts(11), "grn_id": "GRN2024-002",
-     "ebs_commitment_status": "POSTED", "ebs_commitment_ref": "EBS-GL-45891",
-     "items": [{"desc": "A4 Paper Reams (75 GSM)", "qty": 200, "unit": "REAM",
-                "unit_price": 350, "total": 70000, "grn_qty": 200},
-               {"desc": "Ballpoint Pens (Box)", "qty": 50, "unit": "BOX",
-                "unit_price": 450, "total": 22500, "grn_qty": 30},
-               {"desc": "File Folders", "qty": 300, "unit": "PCS",
-                "unit_price": 125, "total": 37500, "grn_qty": 300},
-               {"desc": "Whiteboard Markers", "qty": 100, "unit": "PCS",
-                "unit_price": 80, "total": 8000, "grn_qty": 0},
-               {"desc": "Sticky Notes (Pack)", "qty": 200, "unit": "PACK",
-                "unit_price": 85, "total": 17000, "grn_qty": 200}]},
-    {"id": "PO2024-003", "pr_id": "PR2024-008",
-     "supplier_id": "SUP014", "supplier_name": "KPMG India Pvt Ltd",
-     "po_number": "PO2024-003", "amount": 1800000, "currency": "INR",
-     "status": "RECEIVED", "delivery_date": past(2), "dispatch_date": ts(22),
-     "acknowledged_date": ts(21), "grn_id": "GRN2024-003",
-     "ebs_commitment_status": "POSTED", "ebs_commitment_ref": "EBS-GL-45901",
-     "items": [{"desc": "Change Impact Assessment", "qty": 1, "unit": "LS",
-                "unit_price": 600000, "total": 600000, "grn_qty": 1},
-               {"desc": "Training Design & Delivery", "qty": 1, "unit": "LS",
-                "unit_price": 800000, "total": 800000, "grn_qty": 1},
-               {"desc": "Hypercare Support (3 months)", "qty": 3, "unit": "MONTH",
-                "unit_price": 133333, "total": 400000, "grn_qty": 2}]},
-]
-
-GRNS = [
-    {"id": "GRN2024-001", "po_id": "PO2024-001", "grn_number": "GRN2024-001",
-     "received_date": past(5), "received_by": "Vijay Reddy",
-     "status": "COMPLETE", "notes": "All deliverables received and accepted",
-     "items": [{"desc": "AWS MSK Setup & Configuration", "po_qty": 1, "received_qty": 1, "unit": "LS"},
-               {"desc": "EKS Node Scaling", "po_qty": 1, "received_qty": 1, "unit": "LS"}]},
-    {"id": "GRN2024-002", "po_id": "PO2024-002", "grn_number": "GRN2024-002",
-     "received_date": past(8), "received_by": "Sunita Rao",
-     "status": "PARTIAL", "notes": "Pens partially delivered - balance 20 boxes pending. Markers not yet dispatched.",
-     "items": [{"desc": "A4 Paper Reams (75 GSM)", "po_qty": 200, "received_qty": 200, "unit": "REAM"},
-               {"desc": "Ballpoint Pens (Box)", "po_qty": 50, "received_qty": 30, "unit": "BOX"},
-               {"desc": "File Folders", "po_qty": 300, "received_qty": 300, "unit": "PCS"},
-               {"desc": "Whiteboard Markers", "po_qty": 100, "received_qty": 0, "unit": "PCS"},
-               {"desc": "Sticky Notes (Pack)", "po_qty": 200, "received_qty": 200, "unit": "PACK"}]},
-    {"id": "GRN2024-003", "po_id": "PO2024-003", "grn_number": "GRN2024-003",
-     "received_date": past(2), "received_by": "Meera Iyer",
-     "status": "PARTIAL", "notes": "Change impact & training completed. 2 of 3 months hypercare done.",
-     "items": [{"desc": "Change Impact Assessment", "po_qty": 1, "received_qty": 1, "unit": "LS"},
-               {"desc": "Training Design & Delivery", "po_qty": 1, "received_qty": 1, "unit": "LS"},
-               {"desc": "Hypercare Support (3 months)", "po_qty": 3, "received_qty": 2, "unit": "MONTH"}]},
 ]
 
 INVOICES = [
@@ -558,18 +390,14 @@ VENDOR_PORTAL_EVENTS = [
 ]
 
 
-# ── Mutable state for demo interactions ────────────────────────────
+# ── Mutable state for demo interactions (legacy modules only) ────
 _state = {
-    "prs": copy.deepcopy(PURCHASE_REQUESTS),
-    "pos": copy.deepcopy(PURCHASE_ORDERS),
-    "grns": copy.deepcopy(GRNS),
     "invoices": copy.deepcopy(INVOICES),
     "gst_cache": copy.deepcopy(GST_CACHE),
     "ebs_events": copy.deepcopy(EBS_EVENTS),
     "ai_insights": copy.deepcopy(AI_INSIGHTS),
     "vendor_events": copy.deepcopy(VENDOR_PORTAL_EVENTS),
     "suppliers": copy.deepcopy(SUPPLIERS),
-    "budgets": copy.deepcopy(BUDGETS),
     "gst_last_full_sync": ts(4, 15),
 }
 
@@ -597,20 +425,33 @@ def get_invoice(iid):
 # APP FACTORY
 # ─────────────────────────────────────────────
 
+import logging
+_logger = logging.getLogger("p2p.events")
+
+
+async def _log_pr_event(event: Event) -> None:
+    """Log PR lifecycle events for audit trail."""
+    _logger.info("EVENT %s: %s", event.name, event.data)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler — startup/shutdown."""
-    # On startup: create tables if SQLite (for quick dev without Alembic)
     if settings.DATABASE_URL.startswith("sqlite"):
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+
+    # Register event bus handlers
+    event_bus.subscribe("pr.created", _log_pr_event)
+    event_bus.subscribe("pr.approved", _log_pr_event)
+    event_bus.subscribe("pr.rejected", _log_pr_event)
+
     yield
-    # Shutdown — nothing to clean up for now
 
 
 app = FastAPI(
     title="IDFC P2P Platform API",
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan,
     docs_url="/docs" if settings.ENABLE_DOCS else None,
     redoc_url="/redoc" if settings.ENABLE_DOCS else None,
@@ -629,17 +470,19 @@ register_exception_handlers(app)
 # ── Mount DB-backed module routers ────────────────────────────────
 app.include_router(auth_router)
 app.include_router(suppliers_router)
+app.include_router(budgets_router)
+app.include_router(pr_router)
+app.include_router(po_router)
 
 
 # ─────────────────────────────────────────────
 # LEGACY ENDPOINTS (in-memory, will be migrated)
-# These endpoints are verbatim from the prototype.
 # ─────────────────────────────────────────────
 
 @app.get("/api/health")
 def health():
     return {
-        "status": "ok", "version": "0.2.0",
+        "status": "ok", "version": "0.3.0",
         "services": {
             "supplier_service": "UP", "pr_po_service": "UP",
             "invoice_service": "UP", "gst_sync_service": "UP",
@@ -656,20 +499,39 @@ def health():
     }
 
 
+# ── Dashboard (hybrid — DB for migrated modules, in-memory for rest) ──
+
 @app.get("/api/dashboard")
-def get_dashboard():
+async def get_dashboard(db: AsyncSession = Depends(get_db)):
+    # In-memory data (not yet migrated)
     invoices = _state["invoices"]
-    prs = _state["prs"]
-    pos = _state["pos"]
-    suppliers = _state["suppliers"]
     pending_invoices = [i for i in invoices if i["status"] in ("MATCHED", "PENDING_APPROVAL")]
     msme_at_risk = [i for i in invoices if i.get("msme_status") == "AT_RISK"]
     msme_breached = [i for i in invoices if i.get("msme_status") == "BREACHED"]
     ebs_failed = [e for e in _state["ebs_events"] if e["status"] == "FAILED"]
     fraud_blocked = [i for i in invoices if i.get("fraud_flag")]
-    pending_prs = [p for p in prs if p["status"] == "PENDING_APPROVAL"]
     gst_issues = [g for g in _state["gst_cache"] if not g.get("gstr2b_available") or g.get("gstr1_compliance") == "DELAYED"]
     mtd_spend = sum(i["net_payable"] for i in invoices if i["status"] in ("APPROVED", "POSTED_TO_EBS", "PAID"))
+
+    # DB queries for migrated modules
+    pending_prs_result = await db.execute(
+        select(func.count()).select_from(PurchaseRequest).where(PurchaseRequest.status == "PENDING_APPROVAL")
+    )
+    prs_pending = pending_prs_result.scalar() or 0
+
+    active_pos_result = await db.execute(
+        select(func.count()).select_from(PurchaseOrder).where(PurchaseOrder.status != "CLOSED")
+    )
+    active_pos = active_pos_result.scalar() or 0
+
+    active_suppliers_result = await db.execute(
+        select(func.count()).select_from(Supplier).where(Supplier.status == "ACTIVE")
+    )
+    active_suppliers = active_suppliers_result.scalar() or 0
+
+    budgets_result = await db.execute(select(Budget).order_by(Budget.department_code))
+    budgets = list(budgets_result.scalars().all())
+
     monthly_trend = [
         {"month": "Apr", "spend": 14200000}, {"month": "May", "spend": 18900000},
         {"month": "Jun", "spend": 12400000}, {"month": "Jul", "spend": 22100000},
@@ -706,9 +568,9 @@ def get_dashboard():
         "stats": {
             "invoices_pending": len(pending_invoices),
             "mtd_spend": mtd_spend, "mtd_spend_fmt": fmt_inr(mtd_spend),
-            "active_pos": len([p for p in pos if p["status"] not in ("CLOSED",)]),
-            "active_suppliers": len([s for s in suppliers if s["status"] == "ACTIVE"]),
-            "prs_pending": len(pending_prs),
+            "active_pos": active_pos,
+            "active_suppliers": active_suppliers,
+            "prs_pending": prs_pending,
             "msme_at_risk_count": len(msme_at_risk) + len(msme_breached),
             "ebs_failures": len(ebs_failed), "fraud_blocked": len(fraud_blocked),
             "gst_cache_age_hours": 4.2, "gst_last_sync": _state["gst_last_full_sync"],
@@ -716,97 +578,13 @@ def get_dashboard():
         "alerts": alerts, "monthly_trend": monthly_trend,
         "spend_by_category": spend_by_category, "activity": activity,
         "budget_utilization": [
-            {"dept": b["dept_name"], "total": b["total"], "committed": b["committed"],
-             "actual": b["actual"], "available": b["available"],
-             "utilization_pct": round((b["committed"] + b["actual"]) / b["total"] * 100, 1)}
-            for b in _state["budgets"]
+            {"dept": b.department_name, "total": b.total_amount,
+             "committed": b.committed_amount, "actual": b.actual_amount,
+             "available": b.available_amount,
+             "utilization_pct": round((b.committed_amount + b.actual_amount) / b.total_amount * 100, 1) if b.total_amount else 0}
+            for b in budgets
         ]
     }
-
-
-# ── Purchase Requests (legacy) ────────────────────────────────────
-
-@app.get("/api/purchase-requests")
-def get_prs():
-    return _state["prs"]
-
-@app.get("/api/purchase-requests/{pr_id}")
-def get_pr(pr_id: str):
-    pr = next((p for p in _state["prs"] if p["id"] == pr_id), None)
-    if not pr:
-        raise HTTPException(404, "PR not found")
-    budget = next((b for b in _state["budgets"] if b["dept"] == pr.get("department")), None)
-    return {**pr, "budget": budget}
-
-class PRCreate(PydanticBaseModel):
-    title: str
-    department: str
-    amount: float
-    gl_account: str
-    cost_center: str
-    category: str
-    justification: str
-    requester: str = "Demo User"
-
-@app.post("/api/purchase-requests")
-def create_pr(body: PRCreate):
-    budget = next((b for b in _state["budgets"] if b["dept"] == body.department), None)
-    budget_check = "APPROVED"
-    if budget and body.amount > budget["available"]:
-        budget_check = "FAILED"
-    new_pr = {
-        "id": f"PR2024-{len(_state['prs']) + 9:03d}",
-        "title": body.title, "department": body.department,
-        "requester": body.requester, "requester_email": "demo@idfc.com",
-        "amount": body.amount, "currency": "INR",
-        "gl_account": body.gl_account, "cost_center": body.cost_center,
-        "category": body.category, "justification": body.justification,
-        "status": "PENDING_APPROVAL", "po_id": None,
-        "budget_check": budget_check,
-        "budget_available_at_time": budget["available"] if budget else None,
-        "created_at": ts(0), "approved_at": None, "approver": None, "items": []
-    }
-    _state["prs"].append(new_pr)
-    return new_pr
-
-@app.patch("/api/purchase-requests/{pr_id}/approve")
-def approve_pr(pr_id: str):
-    pr = next((p for p in _state["prs"] if p["id"] == pr_id), None)
-    if not pr:
-        raise HTTPException(404)
-    if pr["status"] != "PENDING_APPROVAL":
-        raise HTTPException(400, f"Cannot approve PR in status {pr['status']}")
-    pr["status"] = "APPROVED"
-    pr["approved_at"] = ts(0)
-    pr["approver"] = "Demo Approver"
-    return pr
-
-@app.patch("/api/purchase-requests/{pr_id}/reject")
-def reject_pr(pr_id: str):
-    pr = next((p for p in _state["prs"] if p["id"] == pr_id), None)
-    if not pr:
-        raise HTTPException(404)
-    pr["status"] = "REJECTED"
-    pr["rejected_at"] = ts(0)
-    pr["rejection_reason"] = "Rejected via demo"
-    return pr
-
-
-# ── Purchase Orders (legacy) ──────────────────────────────────────
-
-@app.get("/api/purchase-orders")
-def get_pos():
-    return _state["pos"]
-
-@app.get("/api/purchase-orders/{po_id}")
-def get_po(po_id: str):
-    po = next((p for p in _state["pos"] if p["id"] == po_id), None)
-    if not po:
-        raise HTTPException(404)
-    grn = next((g for g in _state["grns"] if g["id"] == po.get("grn_id")), None)
-    pr = next((p for p in _state["prs"] if p["id"] == po.get("pr_id")), None)
-    invoices = [i for i in _state["invoices"] if i.get("po_id") == po_id]
-    return {**po, "grn": grn, "pr": pr, "invoices": invoices}
 
 
 # ── Invoices (legacy) ─────────────────────────────────────────────
@@ -819,19 +597,37 @@ def get_invoices(status: str = None):
     return invs
 
 @app.get("/api/invoices/{inv_id}")
-def get_invoice_detail(inv_id: str):
+async def get_invoice_detail(inv_id: str, db: AsyncSession = Depends(get_db)):
     inv = get_invoice(inv_id)
     if not inv:
         raise HTTPException(404)
     supplier = get_supplier(inv["supplier_id"])
     gst_data = next((g for g in _state["gst_cache"] if g.get("gstin") == inv.get("gstin_supplier")), None)
-    po = next((p for p in _state["pos"] if p["id"] == inv.get("po_id")), None)
-    grn = next((g for g in _state["grns"] if g["id"] == inv.get("grn_id")), None)
+    # POs and GRNs are now in DB — query by po_number/grn_number
+    po_dict = None
+    grn_dict = None
+    if inv.get("po_id"):
+        po_result = await db.execute(
+            select(PurchaseOrder).where(PurchaseOrder.po_number == inv["po_id"])
+        )
+        po_row = po_result.scalar_one_or_none()
+        if po_row:
+            po_dict = {k: v for k, v in po_row.__dict__.items() if not k.startswith("_")}
+            po_dict["id"] = po_row.po_number
+    if inv.get("grn_id"):
+        from backend.modules.purchase_orders.models import GoodsReceiptNote
+        grn_result = await db.execute(
+            select(GoodsReceiptNote).where(GoodsReceiptNote.grn_number == inv["grn_id"])
+        )
+        grn_row = grn_result.scalar_one_or_none()
+        if grn_row:
+            grn_dict = {k: v for k, v in grn_row.__dict__.items() if not k.startswith("_")}
+            grn_dict["id"] = grn_row.grn_number
     ai_results = [a for a in _state["ai_insights"] if a.get("invoice_id") == inv_id]
     ebs_events = [e for e in _state["ebs_events"] if e["entity_id"] == inv_id]
     return {
         **inv, "supplier": supplier, "gst_cache_data": gst_data,
-        "purchase_order": po, "grn": grn,
+        "purchase_order": po_dict, "grn": grn_dict,
         "ai_insights": ai_results, "ebs_events": ebs_events,
     }
 
@@ -1073,28 +869,6 @@ def get_spend_analytics():
             "auto_approval_rate_pct": 34.2, "early_payment_savings_mtd": 87500,
             "maverick_spend_pct": 6.3, "po_coverage_pct": 73.8,
         }
-    }
-
-
-# ── Budgets (legacy) ──────────────────────────────────────────────
-
-@app.get("/api/budgets")
-def get_budgets():
-    return _state["budgets"]
-
-@app.post("/api/budgets/check")
-def check_budget(dept: str, amount: float):
-    budget = next((b for b in _state["budgets"] if b["dept"] == dept), None)
-    if not budget:
-        return {"status": "DEPT_NOT_FOUND"}
-    available = budget["available"]
-    return {
-        "dept": dept, "dept_name": budget["dept_name"],
-        "requested_amount": amount, "available_amount": available,
-        "total_budget": budget["total"], "committed": budget["committed"],
-        "actual": budget["actual"],
-        "status": "APPROVED" if amount <= available else "INSUFFICIENT",
-        "utilization_after_pct": round((budget["committed"] + budget["actual"] + amount) / budget["total"] * 100, 1)
     }
 
 
