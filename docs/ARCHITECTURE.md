@@ -8,13 +8,11 @@ The IDFC P2P (Procure-to-Pay) Platform is an AI-native, event-driven system buil
 
 The backend follows a **modular monolith** pattern -- a single deployable FastAPI application partitioned into 16 domain modules under `backend/modules/`. This provides clear domain boundaries that can be extracted into independent microservices in the future when Kafka and service mesh infrastructure are ready.
 
-### Current State (Prototype)
+### Current State (v0.5.0 -- Sprint 4 Complete)
 
-The prototype currently runs as a single-file application (`backend/main.py`) with synthetic in-memory data. The 16 module directories exist as scaffolding for the planned modular architecture. All endpoints, data structures, and frontend integration already function and represent the target API surface.
+All 19 modules are fully DB-backed with SQLAlchemy ORM models, Pydantic schemas, service layers, and FastAPI routers. The system serves 75+ API endpoints, 18 frontend pages, and an internal event bus that auto-persists all events to an immutable audit trail. SQLite is the default database for zero-Docker development; PostgreSQL is supported via `DATABASE_URL`.
 
-### Target State (Modular)
-
-Each module under `backend/modules/` will contain:
+Each module under `backend/modules/` contains:
 
 | File | Purpose |
 |------|---------|
@@ -39,11 +37,14 @@ Each module under `backend/modules/` will contain:
 | `msme_compliance` | invoices | MSME Section 43B(h) 45-day SLA tracking |
 | `ebs_integration` | ebs | Oracle EBS event log and posting |
 | `ai_agents` | ai | AI insights management (5 agents) |
-| `workflow` | workflow | Approval matrices and routing |
-| `notifications` | notifications | Alerts and notification delivery |
-| `audit` | audit | Immutable event log (7-year RBI retention) |
+| `workflow` | workflow | Multi-level approval engine with configurable matrices |
+| `notifications` | notifications | Severity-based alerts (CRITICAL/HIGH/MEDIUM/LOW) |
+| `audit` | audit | Immutable event log -- auto-captured via event bus (7-year RBI retention) |
 | `analytics` | analytics | Spend aggregation and KPIs |
 | `vendor_portal` | vendor_portal | Vendor portal event stream |
+| `payments` | payments | Bank payment runs (NEFT/RTGS/IMPS), TDS deduction, UTR tracking |
+| `tds` | tds | TDS management -- Sec 194C/J/H/I/Q/A, auto-calc with 4% H&E cess |
+| `documents` | documents | Document metadata with versioning, checksums, soft delete |
 
 ## Internal Async Event Bus
 
@@ -114,7 +115,7 @@ SQLite mode collapses all schemas into a single database file but preserves the 
 | Routing | React Router DOM 6.x |
 | Icons | Lucide React |
 
-### Pages (11)
+### Pages (18)
 
 | Page | Route | Description |
 |------|-------|-------------|
@@ -123,9 +124,16 @@ SQLite mode collapses all schemas into a single database file but preserves the 
 | Purchase Orders | `/purchase-orders` | PO detail with GRN match and EBS status |
 | Invoices | `/invoices` | Invoice list with GST, 3-way match, AI coding, MSME SLA |
 | Invoice Detail | `/invoices/:id` | Single invoice deep dive -- all subsystems visible |
+| Matching Engine | `/matching` | 2-way/3-way match results, exception queue, resolve actions |
+| Payments | `/payments` | Payment runs (NEFT/RTGS/IMPS), individual payments, UTR tracking |
+| TDS Management | `/tds` | TDS deductions by section, rate card, auto-calc with cess |
 | GST Cache | `/gst-cache` | Cygnet sync strategy, GSTIN registry, sync button |
 | MSME Compliance | `/msme` | SLA countdown, breach alerts, Sec 43B(h) penalty |
 | Oracle EBS Sync | `/ebs` | Integration event log, scope, retry failed events |
+| Workflow | `/workflow` | Multi-level approval instances, approve/reject, matrix rules |
+| Documents | `/documents` | Document list by entity type, version badges, file sizes |
+| Notifications | `/notifications` | Severity-based alerts, mark read, unread count |
+| Audit Trail | `/audit` | Immutable event log, module filter chips, entity search |
 | AI Agents | `/ai-agents` | 5 agents, confidence scores, reasoning, apply actions |
 | Spend Analytics | `/analytics` | Spend charts, budget vs actual, top vendors |
 | Suppliers | `/suppliers` | Supplier registry, vendor portal events, risk scores |

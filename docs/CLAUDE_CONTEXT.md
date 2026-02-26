@@ -19,12 +19,12 @@ This file provides full project context for AI assistant sessions. Use it to rap
 
 ## Architecture
 
-- **Pattern**: Modular monolith (FastAPI) with 16 domain modules under `backend/modules/`
-- **Current state**: Prototype -- single-file `backend/main.py` with in-memory synthetic data. Module directories exist as scaffolding.
+- **Pattern**: Modular monolith (FastAPI) with 19 domain modules under `backend/modules/`
+- **Current state**: v0.5.0 (Sprint 4 complete) -- all modules fully DB-backed with SQLAlchemy ORM, 75+ endpoints, 18 frontend pages
 - **Each module**: `models.py`, `schemas.py`, `routes.py`, `service.py`, `events.py`
-- **Event bus**: `backend/event_bus.py` -- internal async pub/sub mirroring future Kafka topics
-- **Database**: PostgreSQL 16 with schema-per-module isolation. SQLite fallback for local dev.
-- **Frontend**: React 18 + Vite + Tailwind CSS (11 pages, unchanged from prototype)
+- **Event bus**: `backend/event_bus.py` -- internal async pub/sub. Audit module auto-captures all events.
+- **Database**: SQLite default for zero-Docker dev. PostgreSQL 16 supported via `DATABASE_URL` env var.
+- **Frontend**: React 18 + Vite + Tailwind CSS (18 pages across 4 sidebar groups)
 
 ## Tech Stack
 
@@ -40,7 +40,7 @@ This file provides full project context for AI assistant sessions. Use it to rap
 | Icons | Lucide React |
 | Deployment | Render.com / Docker |
 
-## Module Map (16 Modules)
+## Module Map (19 Modules)
 
 | Module | DB Schema | Key Entities |
 |--------|-----------|-------------|
@@ -50,16 +50,19 @@ This file provides full project context for AI assistant sessions. Use it to rap
 | purchase_requests | procurement | PRs, PR line items |
 | purchase_orders | procurement | POs, PO line items, GRNs |
 | invoices | invoices | invoices, invoice line items |
-| matching | invoices | match results (2-way, 3-way) |
+| matching | invoices | match results (2-way, 3-way), matching exceptions |
 | gst_cache | gst | GSTIN records, sync status |
 | msme_compliance | invoices | SLA tracking, breach records |
 | ebs_integration | ebs | EBS events (AP, GL, FA postings) |
 | ai_agents | ai | AI insights, agent config |
-| workflow | workflow | approval matrices |
-| notifications | notifications | alerts, notification logs |
-| audit | audit | immutable event log |
+| workflow | workflow | approval matrices, approval instances, approval steps |
+| notifications | notifications | severity-based alerts (CRITICAL/HIGH/MEDIUM/LOW) |
+| audit | audit | immutable event log (auto-captured via event bus) |
 | analytics | analytics | spend aggregation |
 | vendor_portal | vendor_portal | vendor portal event stream |
+| payments | payments | payment runs (NEFT/RTGS/IMPS), individual payments, UTR |
+| tds | tds | TDS deductions (Sec 194C/J/H/I/Q/A), challan, Form 16A |
+| documents | documents | document metadata, versioning, checksums |
 
 ## Synthetic Data (Seeded)
 
@@ -110,8 +113,9 @@ Non-MSME: SUP001 (TechMahindra), SUP002 (Wipro), SUP004 (ITC), SUP006 (Sodexo), 
 - **6 vendor portal events** (onboarding, bank verification, GSTIN update, document expiry)
 - **6 budgets** (TECH, OPS, FIN, MKT, HR, ADMIN)
 
-## Frontend Pages (11)
+## Frontend Pages (18)
 
+### Core P2P
 | Page | Route | Component File |
 |------|-------|---------------|
 | Dashboard | `/dashboard` | `Dashboard.jsx` |
@@ -119,18 +123,37 @@ Non-MSME: SUP001 (TechMahindra), SUP002 (Wipro), SUP004 (ITC), SUP006 (Sodexo), 
 | Purchase Orders | `/purchase-orders` | `PurchaseOrders.jsx` |
 | Invoices | `/invoices` | `Invoices.jsx` |
 | Invoice Detail | `/invoices/:id` | `InvoiceDetail.jsx` |
+| Matching Engine | `/matching` | `Matching.jsx` |
+| Payments | `/payments` | `Payments.jsx` |
+| TDS Management | `/tds` | `TDSManagement.jsx` |
+
+### Compliance
+| Page | Route | Component File |
+|------|-------|---------------|
 | GST Cache | `/gst-cache` | `GSTCache.jsx` |
 | MSME Compliance | `/msme` | `MSMECompliance.jsx` |
 | Oracle EBS Sync | `/ebs` | `EBSIntegration.jsx` |
+
+### Operations
+| Page | Route | Component File |
+|------|-------|---------------|
+| Workflow | `/workflow` | `Workflow.jsx` |
+| Documents | `/documents` | `Documents.jsx` |
+| Notifications | `/notifications` | `Notifications.jsx` |
+| Audit Trail | `/audit` | `AuditTrail.jsx` |
+
+### Intelligence
+| Page | Route | Component File |
+|------|-------|---------------|
 | AI Agents | `/ai-agents` | `AIAgents.jsx` |
 | Spend Analytics | `/analytics` | `SpendAnalytics.jsx` |
 | Suppliers | `/suppliers` | `Suppliers.jsx` |
 
 ## API Surface
 
-30+ endpoints, all prefixed `/api/`. See `docs/API_REFERENCE.md` for full list.
+75+ endpoints, all prefixed `/api/`. See `docs/API_REFERENCE.md` for full list.
 
-Key endpoint groups: dashboard, suppliers, purchase-requests, purchase-orders, invoices, gst-cache, msme-compliance, oracle-ebs, ai-agents, vendor-portal, analytics, budgets, health, auth.
+Key endpoint groups: dashboard, suppliers, purchase-requests, purchase-orders, invoices, matching, payments, tds, documents, workflow, notifications, audit, gst-cache, msme-compliance, oracle-ebs, ai-agents, vendor-portal, analytics, budgets, health, auth.
 
 ## Indian Regulatory Requirements
 
@@ -172,6 +195,7 @@ Key endpoint groups: dashboard, suppliers, purchase-requests, purchase-orders, i
 
 ## Deployment
 
-- **Local**: Vite dev server (5173) + FastAPI (8000) with Vite proxy
+- **Local**: Vite dev server (5173) + FastAPI (8001) with Vite proxy. Start with: `uvicorn backend.main:app --port 8001`
 - **Production**: Render.com -- single web service, React built into `frontend/dist/`, served by FastAPI as static files
-- **Docker**: `Dockerfile` builds Python + pre-built frontend dist
+- **Docker**: `Dockerfile` builds Python + pre-built frontend dist. Runs `uvicorn backend.main:app` from project root.
+- **Important**: Always run uvicorn from the project root, not from inside `backend/`. The modular imports (`from backend.modules...`) require the project root in the Python path.

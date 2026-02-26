@@ -342,8 +342,95 @@ Status is `APPROVED` if `amount <= available`, otherwise `INSUFFICIENT`.
 
 ---
 
-## Endpoint Summary
+## Workflow / Approvals
 
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/workflow/matrices` | List all approval matrix rules |
+| POST | `/api/workflow/matrices` | Create an approval rule |
+| GET | `/api/workflow/pending` | List pending approval instances (optional `?approver_role=`) |
+| POST | `/api/workflow/request` | Create approval request (auto-determines levels from matrix) |
+| GET | `/api/workflow/approvals/{id}` | Get approval instance with steps |
+| GET | `/api/workflow/approvals/entity/{type}/{id}` | Get approvals for a specific entity |
+| POST | `/api/workflow/approvals/{id}/approve` | Approve current step |
+| POST | `/api/workflow/approvals/{id}/reject` | Reject (cancels remaining steps) |
+
+---
+
+## Matching Engine
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/matching/results` | List all match results |
+| GET | `/api/matching/summary` | Match statistics (passed, exceptions, blocked) |
+| POST | `/api/matching/run` | Run 2WAY or 3WAY match on an invoice |
+| GET | `/api/matching/exceptions` | List matching exceptions |
+| POST | `/api/matching/exceptions/{id}/resolve` | Resolve exception (APPROVED_OVERRIDE/REJECTED/ESCALATED) |
+
+---
+
+## Payments
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/payments` | List all individual payments |
+| GET | `/api/payments/summary` | Payment totals and status breakdown |
+| GET | `/api/payments/runs` | List payment runs with nested payments |
+| POST | `/api/payments/runs` | Create a payment run for approved invoices |
+| POST | `/api/payments/runs/{id}/process` | Advance run (DRAFT->SCHEDULED->PROCESSING->COMPLETED) |
+
+---
+
+## TDS Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/tds` | List all TDS deductions |
+| GET | `/api/tds/summary` | TDS totals, pending deposits, Form 16A status |
+| GET | `/api/tds/rates` | TDS rate card (all sections with individual/company rates) |
+| POST | `/api/tds` | Create TDS deduction (auto-calculates with 4% H&E cess) |
+| POST | `/api/tds/{id}/deposit` | Record challan deposit |
+| POST | `/api/tds/{id}/form16a` | Generate Form 16A certificate |
+
+---
+
+## Documents
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/documents` | List documents (optional `?entity_type=&entity_id=&document_type=`) |
+| GET | `/api/documents/summary` | Document counts by entity/type, total size |
+| GET | `/api/documents/entity/{type}/{id}` | Get all documents for a specific entity |
+| POST | `/api/documents` | Register document metadata (auto-version, SHA-256 checksum) |
+| DELETE | `/api/documents/{id}` | Soft-delete a document |
+
+---
+
+## Notifications
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/notifications` | List notifications (optional `?unread_only=true&limit=50`) |
+| GET | `/api/notifications/unread-count` | Get count of unread notifications |
+| POST | `/api/notifications` | Create a notification (admin/system use) |
+| PATCH | `/api/notifications/{id}/read` | Mark single notification as read |
+| POST | `/api/notifications/mark-all-read` | Mark all notifications as read |
+
+---
+
+## Audit Trail
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/audit` | List audit logs (optional `?source_module=&event_type=&entity_type=&entity_id=`) |
+| GET | `/api/audit/summary` | Event counts by module, by type, last 24h |
+| GET | `/api/audit/entity/{type}/{id}` | Full audit trail for a specific entity |
+
+---
+
+## Endpoint Summary (75+ endpoints)
+
+### Core P2P (30 endpoints)
 | # | Method | Endpoint | Module |
 |---|--------|----------|--------|
 | 1 | GET | `/api/health` | health |
@@ -376,6 +463,47 @@ Status is `APPROVED` if `amount <= available`, otherwise `INSUFFICIENT`.
 | 28 | GET | `/api/analytics/spend` | analytics |
 | 29 | GET | `/api/budgets` | budgets |
 | 30 | POST | `/api/budgets/check` | budgets |
+
+### Sprint 4 Enterprise Modules (45 endpoints)
+| # | Method | Endpoint | Module |
+|---|--------|----------|--------|
+| 31 | GET | `/api/workflow/matrices` | workflow |
+| 32 | POST | `/api/workflow/matrices` | workflow |
+| 33 | GET | `/api/workflow/pending` | workflow |
+| 34 | POST | `/api/workflow/request` | workflow |
+| 35 | GET | `/api/workflow/approvals/{id}` | workflow |
+| 36 | GET | `/api/workflow/approvals/entity/{type}/{id}` | workflow |
+| 37 | POST | `/api/workflow/approvals/{id}/approve` | workflow |
+| 38 | POST | `/api/workflow/approvals/{id}/reject` | workflow |
+| 39 | GET | `/api/matching/results` | matching |
+| 40 | GET | `/api/matching/summary` | matching |
+| 41 | POST | `/api/matching/run` | matching |
+| 42 | GET | `/api/matching/exceptions` | matching |
+| 43 | POST | `/api/matching/exceptions/{id}/resolve` | matching |
+| 44 | GET | `/api/payments` | payments |
+| 45 | GET | `/api/payments/summary` | payments |
+| 46 | GET | `/api/payments/runs` | payments |
+| 47 | POST | `/api/payments/runs` | payments |
+| 48 | POST | `/api/payments/runs/{id}/process` | payments |
+| 49 | GET | `/api/tds` | tds |
+| 50 | GET | `/api/tds/summary` | tds |
+| 51 | GET | `/api/tds/rates` | tds |
+| 52 | POST | `/api/tds` | tds |
+| 53 | POST | `/api/tds/{id}/deposit` | tds |
+| 54 | POST | `/api/tds/{id}/form16a` | tds |
+| 55 | GET | `/api/documents` | documents |
+| 56 | GET | `/api/documents/summary` | documents |
+| 57 | GET | `/api/documents/entity/{type}/{id}` | documents |
+| 58 | POST | `/api/documents` | documents |
+| 59 | DELETE | `/api/documents/{id}` | documents |
+| 60 | GET | `/api/notifications` | notifications |
+| 61 | GET | `/api/notifications/unread-count` | notifications |
+| 62 | POST | `/api/notifications` | notifications |
+| 63 | PATCH | `/api/notifications/{id}/read` | notifications |
+| 64 | POST | `/api/notifications/mark-all-read` | notifications |
+| 65 | GET | `/api/audit` | audit |
+| 66 | GET | `/api/audit/summary` | audit |
+| 67 | GET | `/api/audit/entity/{type}/{id}` | audit |
 
 ---
 

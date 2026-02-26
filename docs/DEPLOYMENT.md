@@ -22,8 +22,8 @@ cd frontend && npm install && cd ..
 # 3. (Optional) Start PostgreSQL via Docker
 docker compose up -d postgres
 
-# 4. Start backend
-cd backend && uvicorn main:app --reload --port 8000
+# 4. Start backend (from project root)
+uvicorn backend.main:app --reload --port 8001
 
 # 5. Start frontend (separate terminal)
 cd frontend && npm run dev
@@ -72,7 +72,7 @@ services:
     buildCommand: |
       pip install -r requirements.txt
       cd frontend && npm install && npm run build
-    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: "3.11"
@@ -97,7 +97,7 @@ services:
    - Connect to your repository
    - Settings:
      - **Build Command**: `pip install -r requirements.txt && cd frontend && npm install && npm run build`
-     - **Start Command**: `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`
+     - **Start Command**: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
      - **Environment**: Python 3
    - Or use the `render.yaml` for Blueprint deployment (auto-detects from repo)
 
@@ -150,8 +150,8 @@ COPY frontend/dist/ ./frontend/dist/
 
 EXPOSE 10000
 
-WORKDIR /app/backend
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
+WORKDIR /app
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "10000"]
 ```
 
 ### Build and Run
