@@ -158,9 +158,13 @@ async def lifespan(app: FastAPI):
         # Auto-seed if the database is empty (ephemeral SQLite on Render)
         from backend.seed import seed as _seed_db
         try:
+            print("[STARTUP] Running auto-seed...")
             await _seed_db()
+            print("[STARTUP] Auto-seed complete.")
         except Exception as e:
-            _logger.warning("Auto-seed skipped or failed: %s", e)
+            import traceback
+            print(f"[STARTUP] Auto-seed FAILED: {e}")
+            traceback.print_exc()
 
     # Subscribe all event names to logging + audit persistence
     _all_events = [
