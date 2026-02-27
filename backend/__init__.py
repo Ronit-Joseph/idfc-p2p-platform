@@ -1,1 +1,1 @@
-# IDFC P2P Platform - Backend Package
+# P2P Platform - Backend Package

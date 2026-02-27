@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: idfc-p2p-platform
+    name: p2p-platform
     runtime: python
     buildCommand: |
       pip install -r requirements.txt

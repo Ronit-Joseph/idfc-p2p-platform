@@ -1,5 +1,5 @@
 """
-IDFC P2P Platform — App Factory (v0.5.0)
+P2P Platform — App Factory (v0.5.0)
 =========================================
 
 Enterprise-grade modular monolith with full P2P lifecycle coverage.
@@ -183,7 +183,7 @@ async def lifespan(app: FastAPI):
 # ─────────────────────────────────────────────────────────────────
 
 app = FastAPI(
-    title="IDFC P2P Platform API",
+    title="P2P Platform API",
     version="0.5.0",
     lifespan=lifespan,
     docs_url="/docs" if settings.ENABLE_DOCS else None,

@@ -41,8 +41,8 @@ export default function Layout() {
               <Building2 className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="text-white font-semibold text-sm leading-tight">IDFC FIRST Bank</div>
-              <div className="text-gray-400 text-xs">P2P Platform</div>
+              <div className="text-white font-semibold text-sm leading-tight">P2P Platform</div>
+              <div className="text-gray-400 text-xs">Procure to Pay</div>
             </div>
           </div>
         </div>
