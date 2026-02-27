@@ -7,10 +7,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.config import settings
 from backend.dependencies import get_db, get_current_user
 from backend.exceptions import AuthenticationError, AuthorizationError
 from backend.modules.auth.constants import ADMIN
@@ -75,12 +76,33 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 async def me(
+    request: Request,
     current_user: Dict[str, Any] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return the profile of the currently authenticated user."""
+    """Return the profile of the currently authenticated user.
+
+    When AUTH_ENABLED is False, the dependency returns a dev-user stub.
+    If a real Bearer token is provided, decode it to find the actual user.
+    """
     user_id = current_user.get("sub")
-    if user_id is None:
+
+    # If auth is disabled but a real token was sent, decode it
+    if user_id == "dev-user":
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            from jose import jwt, JWTError
+            try:
+                payload = jwt.decode(
+                    auth_header[7:],
+                    settings.JWT_SECRET,
+                    algorithms=[settings.JWT_ALGORITHM],
+                )
+                user_id = payload.get("sub")
+            except JWTError:
+                pass
+
+    if user_id is None or user_id == "dev-user":
         raise AuthenticationError("Invalid token payload")
 
     result = await db.execute(select(User).where(User.id == user_id))
