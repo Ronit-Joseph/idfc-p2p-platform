@@ -2,9 +2,9 @@
 EBS Integration Module — SQLAlchemy Models
 Table: ebs_events
 
-Records all integration events sent to/from Oracle EBS via OIC (Oracle
-Integration Cloud). Oracle EBS is retained only for AP, AR, GL, and
-Fixed Assets — all PR/PO/Invoice UI is handled by the P2P platform.
+Records all integration events sent to/from on-prem Oracle EBS via
+REST API. Oracle EBS is retained only for AP, AR, GL, and Fixed
+Assets — all PR/PO/Invoice UI is handled by the P2P platform.
 
 Derived from the 8-record EBS_EVENTS list in the prototype.
 """

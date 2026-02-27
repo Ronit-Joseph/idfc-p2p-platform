@@ -30,7 +30,7 @@ export default function EBSIntegration() {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-bold text-gray-900">Oracle EBS Integration</h1>
-        <p className="text-sm text-gray-500 mt-0.5">P2P Platform → Oracle Integration Cloud (OIC) → EBS ISG</p>
+        <p className="text-sm text-gray-500 mt-0.5">P2P Platform → On-Prem EBS REST API → Oracle AP/GL/FA</p>
       </div>
 
       {/* Scope callout */}
@@ -78,9 +78,9 @@ export default function EBSIntegration() {
           <span>→</span>
           <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded font-medium">Kafka Topic (ebs.outbound.*)</span>
           <span>→</span>
-          <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded font-medium">OIC EBS Adapter</span>
+          <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded font-medium">On-Prem EBS Adapter</span>
           <span>→</span>
-          <span className="bg-green-100 text-green-800 px-2 py-1 rounded font-medium">EBS ISG (REST)</span>
+          <span className="bg-green-100 text-green-800 px-2 py-1 rounded font-medium">EBS REST API</span>
           <span>→</span>
           <span className="bg-gray-200 text-gray-700 px-2 py-1 rounded font-medium">Oracle AP/GL/FA Open Interface</span>
         </div>

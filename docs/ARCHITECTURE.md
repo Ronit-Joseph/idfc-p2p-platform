@@ -162,11 +162,11 @@ In production, the React app is built (`npm run build`) and served as static fil
 
 All integrations are **mocked** in the prototype. The module structure and API contracts are designed for real integration.
 
-### 1. Oracle EBS (via Oracle Integration Cloud)
+### 1. Oracle EBS (On-Prem REST API)
 
 - **Scope retained**: AP (Accounts Payable), GL (General Ledger), FA (Fixed Assets)
 - **Scope retired from EBS**: PR, PO, Invoice UI -- replaced by this platform
-- **Integration pattern**: Event-driven -- P2P publishes events, OIC translates to EBS ISG REST calls
+- **Integration pattern**: Event-driven -- P2P publishes events, on-prem EBS adapter translates to EBS REST API calls
 - **Module**: `ebs_integration`
 - **Event types**: PO_COMMITMENT, INVOICE_POST, GL_JOURNAL, FA_ADDITION
 

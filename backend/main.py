@@ -608,7 +608,7 @@ async def get_ebs_events(db: AsyncSession = Depends(get_db)):
         },
         "ebs_modules_active": ["AP", "GL", "FA"],
         "ebs_modules_retired": ["PR", "PO", "Invoice UI"],
-        "integration_method": "Oracle Integration Cloud (OIC) \u2192 EBS ISG",
+        "integration_method": "On-Prem EBS REST API",
     }
 
 

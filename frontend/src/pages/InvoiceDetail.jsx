@@ -327,7 +327,7 @@ export default function InvoiceDetail() {
           <div className="space-y-3">
             <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700 border border-blue-200">
               <strong>P2P Platform scope:</strong> This invoice is processed here end-to-end.<br />
-              Upon approval, the platform posts to Oracle AP via OIC adapter. Oracle EBS no longer handles invoice capture, coding, matching or approval.
+              Upon approval, the platform posts to Oracle AP via on-prem EBS REST adapter. Oracle EBS no longer handles invoice capture, coding, matching or approval.
             </div>
             {inv.ebs_events?.length > 0 ? (
               <div className="space-y-2">
