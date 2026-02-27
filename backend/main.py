@@ -155,6 +155,12 @@ async def lifespan(app: FastAPI):
     if settings.DATABASE_URL.startswith("sqlite"):
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+        # Auto-seed if the database is empty (ephemeral SQLite on Render)
+        from backend.seed import seed as _seed_db
+        try:
+            await _seed_db()
+        except Exception as e:
+            _logger.warning("Auto-seed skipped or failed: %s", e)
 
     # Subscribe all event names to logging + audit persistence
     _all_events = [
