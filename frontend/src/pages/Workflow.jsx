@@ -55,14 +55,14 @@ export default function Workflow() {
     }
   }
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">Loading workflow…</div>
+  if (loading) return <div className="flex items-center justify-center h-64 text-warmgray-400">Loading workflow…</div>
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Workflow & Approvals</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Multi-level approval engine · Configurable matrices by entity type, amount, department</p>
+          <h1 className="text-xl font-bold text-warmgray-900">Workflow & Approvals</h1>
+          <p className="text-sm text-warmgray-500 mt-0.5">Multi-level approval engine · Configurable matrices by entity type, amount, department</p>
         </div>
         <button onClick={load} className="btn-secondary text-xs">
           <RefreshCw className="w-3.5 h-3.5" /> Refresh
@@ -74,8 +74,8 @@ export default function Workflow() {
         <div className="bg-white rounded-xl border border-yellow-100 p-5">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Pending Approvals</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{pending.filter(p => p.status === 'PENDING').length}</p>
+              <p className="text-xs text-warmgray-500 font-medium uppercase tracking-wide">Pending Approvals</p>
+              <p className="text-2xl font-bold text-warmgray-900 mt-1">{pending.filter(p => p.status === 'PENDING').length}</p>
             </div>
             <div className="bg-yellow-50 p-2.5 rounded-lg"><Clock className="w-5 h-5 text-yellow-600" /></div>
           </div>
@@ -83,8 +83,8 @@ export default function Workflow() {
         <div className="bg-white rounded-xl border border-green-100 p-5">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Approved</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{pending.filter(p => p.status === 'APPROVED').length}</p>
+              <p className="text-xs text-warmgray-500 font-medium uppercase tracking-wide">Approved</p>
+              <p className="text-2xl font-bold text-warmgray-900 mt-1">{pending.filter(p => p.status === 'APPROVED').length}</p>
             </div>
             <div className="bg-green-50 p-2.5 rounded-lg"><CheckCircle className="w-5 h-5 text-green-600" /></div>
           </div>
@@ -92,19 +92,19 @@ export default function Workflow() {
         <div className="bg-white rounded-xl border border-red-100 p-5">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Rejected</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{pending.filter(p => p.status === 'REJECTED').length}</p>
+              <p className="text-xs text-warmgray-500 font-medium uppercase tracking-wide">Rejected</p>
+              <p className="text-2xl font-bold text-warmgray-900 mt-1">{pending.filter(p => p.status === 'REJECTED').length}</p>
             </div>
             <div className="bg-red-50 p-2.5 rounded-lg"><XCircle className="w-5 h-5 text-red-600" /></div>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-blue-100 p-5">
+        <div className="bg-white rounded-xl border border-brand-100 p-5">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Approval Rules</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{matrices.length}</p>
+              <p className="text-xs text-warmgray-500 font-medium uppercase tracking-wide">Approval Rules</p>
+              <p className="text-2xl font-bold text-warmgray-900 mt-1">{matrices.length}</p>
             </div>
-            <div className="bg-blue-50 p-2.5 rounded-lg"><GitBranch className="w-5 h-5 text-blue-600" /></div>
+            <div className="bg-brand-50 p-2.5 rounded-lg"><GitBranch className="w-5 h-5 text-brand-600" /></div>
           </div>
         </div>
       </div>
@@ -113,7 +113,7 @@ export default function Workflow() {
       <div className="flex gap-2">
         {[['pending', 'Approval Instances'], ['matrices', 'Approval Matrix Rules']].map(([k, l]) => (
           <button key={k}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === k ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === k ? 'bg-brand-500 text-white' : 'bg-white text-warmgray-600 border border-warmgray-200 hover:bg-warmgray-50'}`}
             onClick={() => setTab(k)}>{l}
           </button>
         ))}
@@ -122,7 +122,7 @@ export default function Workflow() {
       {tab === 'pending' ? (
         <div className="space-y-3">
           {pending.length === 0 ? (
-            <div className="card text-center text-gray-400 py-12">
+            <div className="card text-center text-warmgray-400 py-12">
               <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p className="text-sm">No approval instances yet</p>
             </div>
@@ -130,18 +130,18 @@ export default function Workflow() {
             <div key={inst.id} className={`card border-l-4 ${
               inst.status === 'PENDING' ? 'border-l-yellow-400' :
               inst.status === 'APPROVED' ? 'border-l-green-400' :
-              inst.status === 'REJECTED' ? 'border-l-red-400' : 'border-l-gray-300'
+              inst.status === 'REJECTED' ? 'border-l-red-400' : 'border-l-warmgray-300'
             }`}>
               <div className="flex items-center justify-between cursor-pointer" onClick={() => setExpanded(expanded === inst.id ? null : inst.id)}>
                 <div className="flex items-center gap-4">
-                  {expanded === inst.id ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                  {expanded === inst.id ? <ChevronDown className="w-4 h-4 text-warmgray-400" /> : <ChevronRight className="w-4 h-4 text-warmgray-400" />}
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm text-blue-700 font-medium">{inst.entity_type}</span>
-                      <span className="text-gray-400">·</span>
-                      <span className="font-mono text-sm text-gray-700">{inst.entity_id}</span>
+                      <span className="font-mono text-sm text-brand-700 font-medium">{inst.entity_type}</span>
+                      <span className="text-warmgray-400">·</span>
+                      <span className="font-mono text-sm text-warmgray-700">{inst.entity_id}</span>
                     </div>
-                    <div className="text-xs text-gray-400 mt-0.5">
+                    <div className="text-xs text-warmgray-400 mt-0.5">
                       Level {inst.current_level} of {inst.total_levels}
                       {inst.amount && ` · ${fmtInr(inst.amount)}`}
                       {inst.department && ` · ${inst.department}`}
@@ -171,28 +171,28 @@ export default function Workflow() {
 
               {expanded === inst.id && inst.steps && (
                 <div className="mt-4 pl-8 space-y-2">
-                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Approval Steps</div>
+                  <div className="text-xs font-semibold text-warmgray-500 uppercase tracking-wide mb-2">Approval Steps</div>
                   {inst.steps.map((step, i) => (
                     <div key={step.id || i} className={`flex items-center gap-3 rounded-lg p-3 text-sm ${
                       step.status === 'APPROVED' ? 'bg-green-50 border border-green-100' :
                       step.status === 'REJECTED' ? 'bg-red-50 border border-red-100' :
                       step.status === 'PENDING' ? 'bg-yellow-50 border border-yellow-100' :
-                      'bg-gray-50 border border-gray-100'
+                      'bg-warmgray-50 border border-warmgray-100'
                     }`}>
                       <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                         step.status === 'APPROVED' ? 'bg-green-200 text-green-800' :
                         step.status === 'REJECTED' ? 'bg-red-200 text-red-800' :
                         step.status === 'PENDING' ? 'bg-yellow-200 text-yellow-800' :
-                        'bg-gray-200 text-gray-600'
+                        'bg-warmgray-200 text-warmgray-600'
                       }`}>
                         {step.level}
                       </div>
                       <div className="flex-1">
-                        <span className="font-medium text-gray-700">{step.approver_role?.replace(/_/g, ' ')}</span>
-                        {step.approver_name && <span className="text-xs text-gray-400 ml-2">({step.approver_name})</span>}
+                        <span className="font-medium text-warmgray-700">{step.approver_role?.replace(/_/g, ' ')}</span>
+                        {step.approver_name && <span className="text-xs text-warmgray-400 ml-2">({step.approver_name})</span>}
                       </div>
                       <span className={STATUS_BADGE[step.status] || 'badge badge-gray'} style={{fontSize: '10px'}}>{step.status}</span>
-                      {step.comments && <span className="text-xs text-gray-400 italic">"{step.comments}"</span>}
+                      {step.comments && <span className="text-xs text-warmgray-400 italic">"{step.comments}"</span>}
                     </div>
                   ))}
                 </div>
@@ -202,40 +202,42 @@ export default function Workflow() {
         </div>
       ) : (
         <div className="card p-0 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                {['Entity Type', 'Min Amount', 'Max Amount', 'Department', 'Level', 'Approver Role', 'Active'].map(h => (
-                  <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {matrices.length === 0 ? (
-                <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-400 text-sm">No approval rules configured</td></tr>
-              ) : matrices.map(m => (
-                <tr key={m.id} className="table-row-hover">
-                  <td className="px-3 py-3 font-medium text-gray-800">{m.entity_type}</td>
-                  <td className="px-3 py-3">{m.min_amount != null ? fmtInr(m.min_amount) : '—'}</td>
-                  <td className="px-3 py-3">{m.max_amount != null ? fmtInr(m.max_amount) : '—'}</td>
-                  <td className="px-3 py-3 text-xs text-gray-600">{m.department || 'Any'}</td>
-                  <td className="px-3 py-3">
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">
-                      {m.level}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3">
-                    <span className="badge badge-blue text-[10px]">{m.approver_role?.replace(/_/g, ' ')}</span>
-                  </td>
-                  <td className="px-3 py-3">
-                    {m.is_active !== 'NO'
-                      ? <span className="badge badge-green text-[10px]">Active</span>
-                      : <span className="badge badge-gray text-[10px]">Inactive</span>}
-                  </td>
+          <div className="table-wrapper">
+            <table className="w-full text-sm">
+              <thead className="bg-warmgray-50 border-b border-warmgray-100">
+                <tr>
+                  {['Entity Type', 'Min Amount', 'Max Amount', 'Department', 'Level', 'Approver Role', 'Active'].map(h => (
+                    <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-warmgray-500 uppercase tracking-wide">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-warmgray-50">
+                {matrices.length === 0 ? (
+                  <tr><td colSpan={7} className="px-3 py-8 text-center text-warmgray-400 text-sm">No approval rules configured</td></tr>
+                ) : matrices.map(m => (
+                  <tr key={m.id} className="table-row-hover">
+                    <td className="px-3 py-3 font-medium text-warmgray-800">{m.entity_type}</td>
+                    <td className="px-3 py-3">{m.min_amount != null ? fmtInr(m.min_amount) : '—'}</td>
+                    <td className="px-3 py-3">{m.max_amount != null ? fmtInr(m.max_amount) : '—'}</td>
+                    <td className="px-3 py-3 text-xs text-warmgray-600">{m.department || 'Any'}</td>
+                    <td className="px-3 py-3">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-brand-100 text-brand-800 text-xs font-bold">
+                        {m.level}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="badge badge-blue text-[11px]">{m.approver_role?.replace(/_/g, ' ')}</span>
+                    </td>
+                    <td className="px-3 py-3">
+                      {m.is_active !== 'NO'
+                        ? <span className="badge badge-green text-[11px]">Active</span>
+                        : <span className="badge badge-gray text-[11px]">Inactive</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

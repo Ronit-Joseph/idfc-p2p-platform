@@ -21,14 +21,14 @@ const TYPE_BADGE = {
 }
 
 function ConfidenceBar({ value }) {
-  const color = value >= 90 ? 'bg-green-500' : value >= 70 ? 'bg-blue-500' : 'bg-yellow-500'
+  const color = value >= 90 ? 'bg-green-500' : value >= 70 ? 'bg-brand-500' : 'bg-yellow-500'
   return (
     <div className="w-full">
       <div className="flex justify-between text-xs mb-1">
-        <span className="text-gray-400">Confidence</span>
-        <span className="font-bold text-gray-700">{value.toFixed(1)}%</span>
+        <span className="text-warmgray-400">Confidence</span>
+        <span className="font-bold text-warmgray-700">{value.toFixed(1)}%</span>
       </div>
-      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+      <div className="h-2 bg-warmgray-100 rounded-full overflow-hidden">
         <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${value}%` }} />
       </div>
     </div>
@@ -49,28 +49,28 @@ export default function AIAgents() {
     setApplying(null)
   }
 
-  if (!data) return <div className="text-gray-400 py-8 text-center">Loading…</div>
+  if (!data) return <div className="text-warmgray-400 py-8 text-center">Loading…</div>
 
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">AI Agent Layer</h1>
-        <p className="text-sm text-gray-500 mt-0.5">5 specialized agents · Each subscribes to domain events · Emits recommendations with confidence scoring</p>
+        <h1 className="text-xl font-bold text-warmgray-900">AI Agent Layer</h1>
+        <p className="text-sm text-warmgray-500 mt-0.5">5 specialized agents · Each subscribes to domain events · Emits recommendations with confidence scoring</p>
       </div>
 
       {/* Agent status cards */}
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {data.agents.map(agent => {
-          const { Icon, color, bg } = AGENT_ICON[agent.name] || { Icon: Bot, color: 'text-gray-500', bg: 'bg-gray-50' }
+          const { Icon, color, bg } = AGENT_ICON[agent.name] || { Icon: Bot, color: 'text-warmgray-500', bg: 'bg-warmgray-50' }
           return (
             <div key={agent.name} className={`rounded-xl border p-4 ${bg} border-opacity-50`}>
               <div className="flex items-center gap-2 mb-2">
                 <Icon className={`w-4 h-4 ${color}`} />
-                <span className={`w-2 h-2 rounded-full ${agent.status === 'ACTIVE' ? 'bg-green-400' : 'bg-gray-300'}`}></span>
+                <span className={`w-2 h-2 rounded-full ${agent.status === 'ACTIVE' ? 'bg-green-400' : 'bg-warmgray-300'}`}></span>
               </div>
-              <div className="font-semibold text-gray-800 text-xs leading-tight">{agent.name}</div>
-              <div className="text-[10px] text-gray-400 mt-1 font-mono">{agent.model}</div>
-              <div className="mt-3 space-y-1 text-[10px] text-gray-600">
+              <div className="font-semibold text-warmgray-800 text-xs leading-tight">{agent.name}</div>
+              <div className="text-[11px] text-warmgray-400 mt-1 font-mono">{agent.model}</div>
+              <div className="mt-3 space-y-1 text-[11px] text-warmgray-600">
                 <div>Avg Confidence: <strong>{agent.avg_confidence}%</strong></div>
                 {agent.invoices_coded_mtd && <div>Invoices coded: <strong>{agent.invoices_coded_mtd}</strong></div>}
                 {agent.flags_raised_mtd !== undefined && <div>Flags MTD: <strong>{agent.flags_raised_mtd}</strong></div>}
@@ -102,33 +102,33 @@ export default function AIAgents() {
 
       {/* Insights */}
       <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-gray-700">Agent Insights — Current Period</h2>
+        <h2 className="text-sm font-semibold text-warmgray-700">Agent Insights — Current Period</h2>
         {data.insights.map(ai => {
-          const { Icon, color, bg } = AGENT_ICON[ai.agent] || { Icon: Bot, color: 'text-gray-500', bg: 'bg-gray-50' }
+          const { Icon, color, bg } = AGENT_ICON[ai.agent] || { Icon: Bot, color: 'text-warmgray-500', bg: 'bg-warmgray-50' }
           return (
             <div key={ai.id} className={`card border ${
               ai.type === 'FRAUD_ALERT' ? 'border-red-200' :
               ai.type.includes('MSME') ? 'border-yellow-200' :
-              ai.type === 'GL_CODING' ? 'border-purple-200' : 'border-gray-200'}`}>
+              ai.type === 'GL_CODING' ? 'border-purple-200' : 'border-warmgray-200'}`}>
               <div className="flex gap-4">
                 <div className={`${bg} rounded-xl p-3 flex-shrink-0 flex items-center justify-center`}>
                   <Icon className={`w-5 h-5 ${color}`} />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="text-xs font-bold text-gray-600 uppercase">{ai.agent}</span>
+                    <span className="text-xs font-bold text-warmgray-600 uppercase">{ai.agent}</span>
                     <span className={TYPE_BADGE[ai.type] || 'badge badge-gray'}>{ai.type.replace(/_/g,' ')}</span>
-                    <span className={`badge text-[10px] ${ai.applied ? 'badge-green' : 'badge-yellow'}`}>{ai.status}</span>
+                    <span className={`badge text-[11px] ${ai.applied ? 'badge-green' : 'badge-yellow'}`}>{ai.status}</span>
                     {ai.invoice_id && (
                       <button
-                        className="text-xs text-blue-600 hover:underline"
+                        className="text-xs text-brand-600 hover:underline"
                         onClick={() => nav(`/invoices/${ai.invoice_id}`)}>
                         View Invoice →
                       </button>
                     )}
                   </div>
-                  <p className="text-sm font-semibold text-gray-800 mb-1">{ai.recommendation}</p>
-                  <p className="text-xs text-gray-500 leading-relaxed">{ai.reasoning}</p>
+                  <p className="text-sm font-semibold text-warmgray-800 mb-1">{ai.recommendation}</p>
+                  <p className="text-xs text-warmgray-500 leading-relaxed">{ai.reasoning}</p>
                   {ai.applied_at && (
                     <p className="text-xs text-green-600 mt-1">Applied: {new Date(ai.applied_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                   )}

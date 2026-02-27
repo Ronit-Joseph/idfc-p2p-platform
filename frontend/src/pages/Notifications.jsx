@@ -7,7 +7,7 @@ const SEVERITY_STYLE = {
   HIGH:     'border-l-orange-500 bg-orange-50',
   MEDIUM:   'border-l-yellow-500 bg-yellow-50',
   LOW:      'border-l-blue-500 bg-blue-50',
-  INFO:     'border-l-gray-300 bg-gray-50',
+  INFO:     'border-l-warmgray-300 bg-warmgray-50',
 }
 
 const SEVERITY_BADGE = {
@@ -21,10 +21,10 @@ const SEVERITY_BADGE = {
 const TYPE_ICON = {
   MSME_ALERT:       <AlertTriangle className="w-5 h-5 text-red-500" />,
   FRAUD_WARNING:    <Shield className="w-5 h-5 text-red-600" />,
-  APPROVAL_REQUEST: <FileText className="w-5 h-5 text-blue-500" />,
+  APPROVAL_REQUEST: <FileText className="w-5 h-5 text-brand-500" />,
   EBS_FAILURE:      <Server className="w-5 h-5 text-orange-500" />,
   GST_ISSUE:        <AlertTriangle className="w-5 h-5 text-yellow-500" />,
-  SYSTEM:           <Info className="w-5 h-5 text-gray-500" />,
+  SYSTEM:           <Info className="w-5 h-5 text-warmgray-500" />,
   PAYMENT_ALERT:    <Bell className="w-5 h-5 text-green-500" />,
 }
 
@@ -62,14 +62,14 @@ export default function Notifications() {
     : filter === 'UNREAD' ? notifications.filter(n => !n.is_read)
     : notifications.filter(n => n.severity === filter)
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">Loading notifications…</div>
+  if (loading) return <div className="flex items-center justify-center h-64 text-warmgray-400">Loading notifications…</div>
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Notifications</h1>
-          <p className="text-sm text-gray-500 mt-0.5">System alerts, compliance warnings, approval requests</p>
+          <h1 className="text-xl font-bold text-warmgray-900">Notifications</h1>
+          <p className="text-sm text-warmgray-500 mt-0.5">System alerts, compliance warnings, approval requests</p>
         </div>
         <div className="flex gap-2">
           {unreadCount > 0 && (
@@ -85,19 +85,19 @@ export default function Notifications() {
 
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-blue-100 p-5">
+        <div className="bg-white rounded-xl border border-brand-100 p-5">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Total</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{notifications.length}</p>
+              <p className="text-xs text-warmgray-500 font-medium uppercase tracking-wide">Total</p>
+              <p className="text-2xl font-bold text-warmgray-900 mt-1">{notifications.length}</p>
             </div>
-            <div className="bg-blue-50 p-2.5 rounded-lg"><Bell className="w-5 h-5 text-blue-600" /></div>
+            <div className="bg-brand-50 p-2.5 rounded-lg"><Bell className="w-5 h-5 text-brand-600" /></div>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-red-100 p-5">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Unread</p>
+              <p className="text-xs text-warmgray-500 font-medium uppercase tracking-wide">Unread</p>
               <p className="text-2xl font-bold text-red-600 mt-1">{unreadCount}</p>
             </div>
             <div className="bg-red-50 p-2.5 rounded-lg"><Eye className="w-5 h-5 text-red-600" /></div>
@@ -106,8 +106,8 @@ export default function Notifications() {
         <div className="bg-white rounded-xl border border-red-100 p-5">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Critical</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{notifications.filter(n => n.severity === 'CRITICAL').length}</p>
+              <p className="text-xs text-warmgray-500 font-medium uppercase tracking-wide">Critical</p>
+              <p className="text-2xl font-bold text-warmgray-900 mt-1">{notifications.filter(n => n.severity === 'CRITICAL').length}</p>
             </div>
             <div className="bg-red-50 p-2.5 rounded-lg"><AlertTriangle className="w-5 h-5 text-red-600" /></div>
           </div>
@@ -115,8 +115,8 @@ export default function Notifications() {
         <div className="bg-white rounded-xl border border-orange-100 p-5">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">High Priority</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{notifications.filter(n => n.severity === 'HIGH').length}</p>
+              <p className="text-xs text-warmgray-500 font-medium uppercase tracking-wide">High Priority</p>
+              <p className="text-2xl font-bold text-warmgray-900 mt-1">{notifications.filter(n => n.severity === 'HIGH').length}</p>
             </div>
             <div className="bg-orange-50 p-2.5 rounded-lg"><AlertTriangle className="w-5 h-5 text-orange-600" /></div>
           </div>
@@ -127,7 +127,7 @@ export default function Notifications() {
       <div className="flex gap-2 flex-wrap">
         {['ALL', 'UNREAD', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(f => (
           <button key={f}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === f ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === f ? 'bg-brand-500 text-white' : 'bg-white text-warmgray-600 border border-warmgray-200 hover:bg-warmgray-50'}`}
             onClick={() => setFilter(f)}>
             {f === 'ALL' ? `All (${notifications.length})` :
              f === 'UNREAD' ? `Unread (${unreadCount})` :
@@ -139,30 +139,30 @@ export default function Notifications() {
       {/* Notification list */}
       <div className="space-y-2">
         {filtered.length === 0 ? (
-          <div className="card text-center text-gray-400 py-12">
+          <div className="card text-center text-warmgray-400 py-12">
             <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
             <p className="text-sm">No notifications</p>
           </div>
         ) : filtered.map(n => (
           <div key={n.id}
             className={`rounded-xl border-l-4 border p-4 transition-all ${
-              SEVERITY_STYLE[n.severity] || 'border-l-gray-300 bg-gray-50'
-            } ${!n.is_read ? 'ring-1 ring-blue-200' : 'opacity-80'}`}>
+              SEVERITY_STYLE[n.severity] || 'border-l-warmgray-300 bg-warmgray-50'
+            } ${!n.is_read ? 'ring-1 ring-brand-200' : 'opacity-80'}`}>
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 mt-0.5">
-                {TYPE_ICON[n.notification_type] || <Bell className="w-5 h-5 text-gray-400" />}
+                {TYPE_ICON[n.notification_type] || <Bell className="w-5 h-5 text-warmgray-400" />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className={`text-sm font-semibold ${!n.is_read ? 'text-gray-900' : 'text-gray-600'}`}>{n.title}</h4>
+                  <h4 className={`text-sm font-semibold ${!n.is_read ? 'text-warmgray-900' : 'text-warmgray-600'}`}>{n.title}</h4>
                   <span className={SEVERITY_BADGE[n.severity] || 'badge badge-gray'} style={{fontSize: '10px'}}>{n.severity}</span>
-                  {!n.is_read && <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>}
+                  {!n.is_read && <span className="w-2 h-2 bg-brand-500 rounded-full flex-shrink-0"></span>}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">{n.message}</p>
+                <p className="text-xs text-warmgray-500 mt-1">{n.message}</p>
                 <div className="flex items-center gap-3 mt-2">
-                  <span className="text-[10px] text-gray-400 font-mono">{n.notification_type}</span>
-                  <span className="text-[10px] text-gray-300">·</span>
-                  <span className="text-[10px] text-gray-400">
+                  <span className="text-[11px] text-warmgray-400 font-mono">{n.notification_type}</span>
+                  <span className="text-[11px] text-warmgray-300">·</span>
+                  <span className="text-[11px] text-warmgray-400">
                     {n.created_at ? new Date(n.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
                   </span>
                 </div>
@@ -170,7 +170,7 @@ export default function Notifications() {
               {!n.is_read && (
                 <button
                   onClick={() => handleMarkRead(n.id)}
-                  className="flex-shrink-0 px-2 py-1 text-xs text-blue-600 hover:bg-blue-100 rounded transition-colors">
+                  className="flex-shrink-0 px-2 py-1 text-xs text-brand-600 hover:bg-brand-100 rounded transition-colors">
                   Mark read
                 </button>
               )}

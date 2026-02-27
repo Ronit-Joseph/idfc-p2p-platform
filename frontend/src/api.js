@@ -2,6 +2,11 @@ import axios from 'axios'
 
 const api = axios.create({ baseURL: '/api' })
 
+// Auth
+export const loginUser = (email, password) => api.post('/auth/login', { email, password }).then(r => r.data)
+export const registerUser = (data) => api.post('/auth/register', data).then(r => r.data)
+export const getCurrentUser = () => api.get('/auth/me').then(r => r.data)
+
 export const getDashboard = () => api.get('/dashboard').then(r => r.data)
 export const getSuppliers = () => api.get('/suppliers').then(r => r.data)
 export const getSupplier = (id) => api.get(`/suppliers/${id}`).then(r => r.data)
@@ -80,5 +85,11 @@ export const getDocuments = (params) => api.get('/documents', { params }).then(r
 export const getDocumentSummary = () => api.get('/documents/summary').then(r => r.data)
 export const createDocument = (body) => api.post('/documents', body).then(r => r.data)
 export const deleteDocument = (id) => api.delete(`/documents/${id}`).then(r => r.data)
+
+// Reports / Export
+export const exportCSV = (type) => {
+  const url = `/api/reports/${type}/csv`
+  window.open(url, '_blank')
+}
 
 export default api

@@ -6,7 +6,7 @@ import { ArrowLeft, Shield, Database, Server, Bot, AlertTriangle, CheckCircle, X
 const fmtInr = v => v != null ? (v >= 100000 ? `₹${(v/100000).toFixed(2)}L` : `₹${v.toLocaleString('en-IN')}`) : '—'
 
 const STATUS_COLOR = {
-  CAPTURED: 'bg-gray-100 text-gray-700',
+  CAPTURED: 'bg-warmgray-100 text-warmgray-700',
   EXTRACTED: 'bg-blue-100 text-blue-800',
   VALIDATED: 'bg-purple-100 text-purple-800',
   MATCHED: 'bg-indigo-100 text-indigo-800',
@@ -17,12 +17,12 @@ const STATUS_COLOR = {
   PAID: 'bg-green-100 text-green-800',
 }
 
-function Section({ title, icon: Icon, iconColor = 'text-blue-500', children, className = '' }) {
+function Section({ title, icon: Icon, iconColor = 'text-brand-500', children, className = '' }) {
   return (
     <div className={`card ${className}`}>
-      <div className={`flex items-center gap-2 mb-4 pb-3 border-b border-gray-100`}>
+      <div className={`flex items-center gap-2 mb-4 pb-3 border-b border-warmgray-100`}>
         <Icon className={`w-4 h-4 ${iconColor}`} />
-        <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
+        <h3 className="text-sm font-semibold text-warmgray-800">{title}</h3>
       </div>
       {children}
     </div>
@@ -32,8 +32,8 @@ function Section({ title, icon: Icon, iconColor = 'text-blue-500', children, cla
 function InfoRow({ label, value, mono = false, className = '' }) {
   return (
     <div className={className}>
-      <div className="text-xs text-gray-400 mb-0.5">{label}</div>
-      <div className={`text-sm font-medium text-gray-800 ${mono ? 'font-mono' : ''}`}>{value ?? '—'}</div>
+      <div className="text-xs text-warmgray-400 mb-0.5">{label}</div>
+      <div className={`text-sm font-medium text-warmgray-800 ${mono ? 'font-mono' : ''}`}>{value ?? '—'}</div>
     </div>
   )
 }
@@ -70,7 +70,7 @@ export default function InvoiceDetail() {
     setActing(false)
   }
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">Loading invoice…</div>
+  if (loading) return <div className="flex items-center justify-center h-64 text-warmgray-400">Loading invoice…</div>
   if (!inv) return <div className="text-red-500">Invoice not found</div>
 
   const canApprove = ['MATCHED', 'PENDING_APPROVAL', 'VALIDATED'].includes(inv.status) && !inv.fraud_flag
@@ -85,8 +85,8 @@ export default function InvoiceDetail() {
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-gray-900">{inv.invoice_number}</h1>
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLOR[inv.status] || 'bg-gray-100'}`}>
+            <h1 className="text-xl font-bold text-warmgray-900">{inv.invoice_number}</h1>
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLOR[inv.status] || 'bg-warmgray-100'}`}>
               {inv.status?.replace(/_/g, ' ')}
             </span>
             {inv.fraud_flag && <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">🚨 FRAUD BLOCKED</span>}
@@ -96,7 +96,7 @@ export default function InvoiceDetail() {
               </span>
             )}
           </div>
-          <p className="text-sm text-gray-500 mt-0.5">{inv.supplier_name} · Invoice date: {inv.invoice_date}</p>
+          <p className="text-sm text-warmgray-500 mt-0.5">{inv.supplier_name} · Invoice date: {inv.invoice_date}</p>
         </div>
         <div className="flex gap-2">
           {canProcess && (
@@ -118,35 +118,35 @@ export default function InvoiceDetail() {
       </div>
 
       {/* Invoice amount summary strip */}
-      <div className="bg-gradient-to-r from-blue-900 to-blue-800 rounded-xl p-5 text-white">
-        <div className="grid grid-cols-5 gap-6">
+      <div className="bg-gradient-to-r from-brand-600 to-brand-800 rounded-xl p-5 text-white">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           <div>
-            <div className="text-blue-300 text-xs uppercase tracking-wide">Subtotal</div>
+            <div className="text-brand-200 text-xs uppercase tracking-wide">Subtotal</div>
             <div className="text-xl font-bold mt-0.5">{fmtInr(inv.subtotal)}</div>
           </div>
           <div>
-            <div className="text-blue-300 text-xs uppercase tracking-wide">GST ({inv.gst_rate}%)</div>
+            <div className="text-brand-200 text-xs uppercase tracking-wide">GST ({inv.gst_rate}%)</div>
             <div className="text-xl font-bold mt-0.5">{fmtInr(inv.gst_amount)}</div>
           </div>
           <div>
-            <div className="text-blue-300 text-xs uppercase tracking-wide">Gross Total</div>
+            <div className="text-brand-200 text-xs uppercase tracking-wide">Gross Total</div>
             <div className="text-xl font-bold mt-0.5">{fmtInr(inv.total_amount)}</div>
           </div>
           <div>
-            <div className="text-blue-300 text-xs uppercase tracking-wide">TDS ({inv.tds_rate}%)</div>
+            <div className="text-brand-200 text-xs uppercase tracking-wide">TDS ({inv.tds_rate}%)</div>
             <div className="text-xl font-bold mt-0.5 text-yellow-300">- {fmtInr(inv.tds_amount)}</div>
           </div>
-          <div className="border-l border-blue-700 pl-6">
-            <div className="text-blue-300 text-xs uppercase tracking-wide">Net Payable</div>
-            <div className="text-2xl font-bold mt-0.5 text-green-300">{fmtInr(inv.net_payable)}</div>
-          </div>
+        </div>
+        <div className="mt-4 pt-4 border-t border-brand-500">
+          <div className="text-brand-200 text-xs uppercase tracking-wide">Net Payable</div>
+          <div className="text-2xl font-bold mt-0.5 text-green-300">{fmtInr(inv.net_payable)}</div>
         </div>
       </div>
 
       {/* Main grid */}
       <div className="grid grid-cols-2 gap-5">
         {/* Invoice details */}
-        <Section title="Invoice Details" icon={RefreshCw} iconColor="text-gray-400">
+        <Section title="Invoice Details" icon={RefreshCw} iconColor="text-warmgray-400">
           <div className="grid grid-cols-2 gap-4">
             <InfoRow label="Invoice Number" value={inv.invoice_number} mono />
             <InfoRow label="Invoice Date" value={inv.invoice_date} />
@@ -168,7 +168,7 @@ export default function InvoiceDetail() {
         </Section>
 
         {/* GST Cache Validation */}
-        <Section title="GST Validation — Cygnet Cache" icon={Database} iconColor="text-blue-500">
+        <Section title="GST Validation — Cygnet Cache" icon={Database} iconColor="text-brand-500">
           {inv.gstin_validated_from_cache ? (
             <div>
               <div className="flex items-center gap-2 mb-3">
@@ -177,23 +177,23 @@ export default function InvoiceDetail() {
                 </div>
                 <div>
                   <div className="font-semibold text-green-800 text-sm">GSTIN Validated — From Local Cache</div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-warmgray-500">
                     Last Cygnet sync: {inv.gstin_cache_age_hours?.toFixed(1)}h ago · No live API call made
                   </div>
                 </div>
               </div>
               {inv.gst_cache_data && (
-                <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
+                <div className="bg-warmgray-50 rounded-lg p-3 space-y-2 text-sm">
                   <div className="grid grid-cols-2 gap-3">
-                    <div><span className="text-xs text-gray-400">Registration Type</span><br />{inv.gst_cache_data.registration_type}</div>
-                    <div><span className="text-xs text-gray-400">Status</span><br />
+                    <div><span className="text-xs text-warmgray-400">Registration Type</span><br />{inv.gst_cache_data.registration_type}</div>
+                    <div><span className="text-xs text-warmgray-400">Status</span><br />
                       <span className="text-green-700 font-medium">✓ {inv.gst_cache_data.status}</span></div>
-                    <div><span className="text-xs text-gray-400">GSTR-1 Compliance</span><br />
+                    <div><span className="text-xs text-warmgray-400">GSTR-1 Compliance</span><br />
                       <span className={inv.gst_cache_data.gstr1_compliance === 'FILED' ? 'text-green-700' : 'text-yellow-600'}>
                         {inv.gst_cache_data.gstr1_compliance}
                       </span>
                     </div>
-                    <div><span className="text-xs text-gray-400">GSTR-2B Available</span><br />
+                    <div><span className="text-xs text-warmgray-400">GSTR-2B Available</span><br />
                       {inv.gst_cache_data.gstr2b_available
                         ? <span className="text-green-700">✓ {inv.gst_cache_data.gstr2b_period}</span>
                         : <span className="text-red-500">✗ Not available</span>}
@@ -204,13 +204,13 @@ export default function InvoiceDetail() {
                   </div>
                 </div>
               )}
-              <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
+              <div className="mt-3 flex items-center gap-2 text-xs text-warmgray-400">
                 <Database className="w-3 h-3" />
                 <span>Sync provider: <strong>Cygnet GSP</strong> · Batch mode · {inv.gst_cache_data?.cache_hit_count} cache hits to date for this GSTIN</span>
               </div>
             </div>
           ) : (
-            <div className="text-center text-gray-400 py-6">
+            <div className="text-center text-warmgray-400 py-6">
               <Database className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p className="text-sm">GST validation pending — invoice not yet processed</p>
             </div>
@@ -221,7 +221,7 @@ export default function InvoiceDetail() {
         <Section title="3-Way Matching Engine" icon={CheckCircle} iconColor={
           inv.match_status === '3WAY_MATCH_PASSED' ? 'text-green-500' :
           inv.match_status === '3WAY_MATCH_EXCEPTION' ? 'text-yellow-500' :
-          inv.match_status === 'BLOCKED_FRAUD' ? 'text-red-500' : 'text-gray-400'
+          inv.match_status === 'BLOCKED_FRAUD' ? 'text-red-500' : 'text-warmgray-400'
         }>
           {inv.match_status && inv.match_status !== 'PENDING' ? (
             <div>
@@ -230,7 +230,7 @@ export default function InvoiceDetail() {
                 inv.match_status === '2WAY_MATCH_PASSED' ? 'bg-blue-50 text-blue-800 border border-blue-200' :
                 inv.match_status === '3WAY_MATCH_EXCEPTION' ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' :
                 inv.match_status === 'BLOCKED_FRAUD' ? 'bg-red-50 text-red-800 border border-red-200' :
-                'bg-gray-50 text-gray-700 border border-gray-200'
+                'bg-warmgray-50 text-warmgray-700 border border-warmgray-200'
               }`}>
                 {inv.match_status === '3WAY_MATCH_PASSED' && '✓ 3-Way Match PASSED — PO = GRN = Invoice'}
                 {inv.match_status === '2WAY_MATCH_PASSED' && '✓ 2-Way Match PASSED — PO = Invoice (No GRN required)'}
@@ -242,45 +242,47 @@ export default function InvoiceDetail() {
 
               {inv.purchase_order && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase mb-2">PO vs GRN vs Invoice</p>
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="text-gray-400 border-b border-gray-100">
-                        <th className="text-left py-1.5">Item</th>
-                        <th className="text-center py-1.5 text-blue-600">PO Qty</th>
-                        <th className="text-center py-1.5 text-purple-600">GRN Qty</th>
-                        <th className="text-center py-1.5 text-green-600">Inv Qty</th>
-                        <th className="text-center py-1.5">Match</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {inv.purchase_order.items?.map((item, i) => {
-                        const grnItem = inv.grn?.items?.find(g => g.desc === item.desc)
-                        const invQty = item.grn_qty ?? item.qty
-                        const grnQty = grnItem?.received_qty ?? item.grn_qty
-                        const match3 = item.qty === grnQty && item.qty === invQty
-                        const match2 = !grnQty ? item.qty === invQty : false
-                        return (
-                          <tr key={i} className="border-t border-gray-50">
-                            <td className="py-1.5 text-gray-700 truncate max-w-[100px]">{item.desc}</td>
-                            <td className="py-1.5 text-center text-blue-700">{item.qty}</td>
-                            <td className="py-1.5 text-center text-purple-700">{grnQty ?? '—'}</td>
-                            <td className="py-1.5 text-center text-green-700">{invQty}</td>
-                            <td className="py-1.5 text-center">
-                              {match3 ? <span className="text-green-600">✓</span>
-                               : grnQty === 0 ? <span className="text-gray-300">—</span>
-                               : <span className="text-yellow-600">⚡</span>}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+                  <p className="text-xs font-semibold text-warmgray-400 uppercase mb-2">PO vs GRN vs Invoice</p>
+                  <div className="table-wrapper">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-warmgray-400 border-b border-warmgray-100">
+                          <th className="text-left py-1.5">Item</th>
+                          <th className="text-center py-1.5 text-brand-600">PO Qty</th>
+                          <th className="text-center py-1.5 text-purple-600">GRN Qty</th>
+                          <th className="text-center py-1.5 text-green-600">Inv Qty</th>
+                          <th className="text-center py-1.5">Match</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {inv.purchase_order.items?.map((item, i) => {
+                          const grnItem = inv.grn?.items?.find(g => g.desc === item.desc)
+                          const invQty = item.grn_qty ?? item.qty
+                          const grnQty = grnItem?.received_qty ?? item.grn_qty
+                          const match3 = item.qty === grnQty && item.qty === invQty
+                          const match2 = !grnQty ? item.qty === invQty : false
+                          return (
+                            <tr key={i} className="border-t border-warmgray-50">
+                              <td className="py-1.5 text-warmgray-700 truncate max-w-[100px]">{item.desc}</td>
+                              <td className="py-1.5 text-center text-brand-700">{item.qty}</td>
+                              <td className="py-1.5 text-center text-purple-700">{grnQty ?? '—'}</td>
+                              <td className="py-1.5 text-center text-green-700">{invQty}</td>
+                              <td className="py-1.5 text-center">
+                                {match3 ? <span className="text-green-600">✓</span>
+                                 : grnQty === 0 ? <span className="text-warmgray-300">—</span>
+                                 : <span className="text-yellow-600">⚡</span>}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
           ) : (
-            <div className="text-center text-gray-300 py-6 text-sm">Matching not yet run</div>
+            <div className="text-center text-warmgray-300 py-6 text-sm">Matching not yet run</div>
           )}
         </Section>
 
@@ -293,39 +295,39 @@ export default function InvoiceDetail() {
                   ai.type === 'FRAUD_ALERT' ? 'bg-red-50 border-red-200' :
                   ai.type === 'MSME_SLA_RISK' || ai.type === 'MSME_SLA_BREACH' ? 'bg-yellow-50 border-yellow-200' :
                   ai.type === 'GL_CODING' ? 'bg-purple-50 border-purple-200' :
-                  'bg-blue-50 border-blue-200'
+                  'bg-brand-50 border-brand-200'
                 }`}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-gray-500 uppercase">{ai.agent}</span>
-                        <span className={`badge text-[10px] ${ai.type === 'FRAUD_ALERT' ? 'badge-red' : ai.type.includes('MSME') ? 'badge-yellow' : 'badge-purple'}`}>
+                        <span className="text-xs font-bold text-warmgray-500 uppercase">{ai.agent}</span>
+                        <span className={`badge text-[11px] ${ai.type === 'FRAUD_ALERT' ? 'badge-red' : ai.type.includes('MSME') ? 'badge-yellow' : 'badge-purple'}`}>
                           {ai.type.replace(/_/g,' ')}
                         </span>
-                        <span className={`badge text-[10px] ${ai.applied ? 'badge-green' : 'badge-gray'}`}>
+                        <span className={`badge text-[11px] ${ai.applied ? 'badge-green' : 'badge-gray'}`}>
                           {ai.status}
                         </span>
                       </div>
-                      <p className="font-medium text-gray-800">{ai.recommendation}</p>
-                      <p className="text-xs text-gray-500 mt-1">{ai.reasoning}</p>
+                      <p className="font-medium text-warmgray-800">{ai.recommendation}</p>
+                      <p className="text-xs text-warmgray-500 mt-1">{ai.reasoning}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <div className="text-lg font-bold text-gray-700">{ai.confidence.toFixed(0)}%</div>
-                      <div className="text-xs text-gray-400">confidence</div>
+                      <div className="text-lg font-bold text-warmgray-700">{ai.confidence.toFixed(0)}%</div>
+                      <div className="text-xs text-warmgray-400">confidence</div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center text-gray-300 py-6 text-sm">AI evaluation pending</div>
+            <div className="text-center text-warmgray-300 py-6 text-sm">AI evaluation pending</div>
           )}
         </Section>
 
         {/* Oracle EBS */}
         <Section title="Oracle EBS Integration" icon={Server} iconColor="text-orange-500">
           <div className="space-y-3">
-            <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700 border border-blue-200">
+            <div className="bg-brand-50 rounded-lg p-3 text-xs text-brand-700 border border-brand-200">
               <strong>P2P Platform scope:</strong> This invoice is processed here end-to-end.<br />
               Upon approval, the platform posts to Oracle AP via on-prem EBS REST adapter. Oracle EBS no longer handles invoice capture, coding, matching or approval.
             </div>
@@ -338,12 +340,12 @@ export default function InvoiceDetail() {
                     'bg-yellow-50 border-yellow-200'}`}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-medium text-gray-800">{e.description}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">Module: <strong>{e.ebs_module}</strong> · Amount: {fmtInr(e.amount)}</div>
-                        {e.ebs_ref && <div className="text-xs font-mono text-gray-600 mt-0.5">EBS Ref: {e.ebs_ref}</div>}
+                        <div className="font-medium text-warmgray-800">{e.description}</div>
+                        <div className="text-xs text-warmgray-500 mt-0.5">Module: <strong>{e.ebs_module}</strong> · Amount: {fmtInr(e.amount)}</div>
+                        {e.ebs_ref && <div className="text-xs font-mono text-warmgray-600 mt-0.5">EBS Ref: {e.ebs_ref}</div>}
                         {e.error_message && <div className="text-xs text-red-600 mt-1">{e.error_message}</div>}
                       </div>
-                      <span className={`badge text-[10px] ${e.status === 'ACKNOWLEDGED' ? 'badge-green' : e.status === 'FAILED' ? 'badge-red' : 'badge-yellow'}`}>
+                      <span className={`badge text-[11px] ${e.status === 'ACKNOWLEDGED' ? 'badge-green' : e.status === 'FAILED' ? 'badge-red' : 'badge-yellow'}`}>
                         {e.status}
                       </span>
                     </div>
@@ -351,7 +353,7 @@ export default function InvoiceDetail() {
                 ))}
               </div>
             ) : (
-              <div className="text-center text-gray-300 py-4 text-sm">
+              <div className="text-center text-warmgray-300 py-4 text-sm">
                 {inv.status === 'CAPTURED' || inv.status === 'EXTRACTED' ? 'EBS posting will happen after invoice approval' : 'No EBS events yet'}
               </div>
             )}
@@ -378,7 +380,7 @@ export default function InvoiceDetail() {
                 inv.msme_status === 'AT_RISK' ? 'text-yellow-600' : 'text-green-600'}`}>
                 {inv.msme_days_remaining > 0 ? inv.msme_days_remaining : Math.abs(inv.msme_days_remaining)}
               </div>
-              <div className="text-sm font-medium text-gray-700 mt-1">
+              <div className="text-sm font-medium text-warmgray-700 mt-1">
                 {inv.msme_status === 'BREACHED' ? `days OVERDUE — penalty accruing` :
                  inv.msme_status === 'AT_RISK' ? `days remaining to pay` : `days remaining`}
               </div>
@@ -398,7 +400,7 @@ export default function InvoiceDetail() {
                 } />
               )}
             </div>
-            <div className="mt-3 text-xs text-gray-500 bg-gray-50 rounded p-2">
+            <div className="mt-3 text-xs text-warmgray-500 bg-warmgray-50 rounded p-2">
               Finance Act 2023, Section 43B(h): Payments to MSME suppliers must be made within 45 days (or 15 days if no written agreement). Late payment attracts compound interest @ 3× RBI rate (currently {3 * 6.5}% p.a.).
             </div>
           </Section>

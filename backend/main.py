@@ -67,6 +67,9 @@ from backend.modules.matching.routes import router as matching_router
 from backend.modules.payments.routes import router as payments_router
 from backend.modules.tds.routes import router as tds_router
 from backend.modules.documents.routes import router as documents_router
+from backend.modules.contracts.routes import router as contracts_router
+from backend.modules.sourcing.routes import router as sourcing_router
+from backend.modules.reports.routes import router as reports_router
 
 # ── Module services (for legacy-compat wrapper endpoints) ──────────
 from backend.modules.gst_cache import service as gst_service
@@ -94,6 +97,8 @@ from backend.modules.audit.models import AuditLog  # noqa: F401
 from backend.modules.payments.models import Payment, PaymentRun  # noqa: F401
 from backend.modules.tds.models import TDSDeduction  # noqa: F401
 from backend.modules.documents.models import Document  # noqa: F401
+from backend.modules.contracts.models import Contract  # noqa: F401
+from backend.modules.sourcing.models import RFQ, RFQResponse  # noqa: F401
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -226,6 +231,9 @@ app.include_router(matching_router)
 app.include_router(payments_router)
 app.include_router(tds_router)
 app.include_router(documents_router)
+app.include_router(contracts_router)
+app.include_router(sourcing_router)
+app.include_router(reports_router)
 
 
 # ─────────────────────────────────────────────────────────────────

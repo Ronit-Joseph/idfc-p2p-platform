@@ -42,6 +42,8 @@ from backend.modules.audit.models import AuditLog
 from backend.modules.payments.models import Payment, PaymentRun
 from backend.modules.tds.models import TDSDeduction
 from backend.modules.documents.models import Document
+from backend.modules.contracts.models import Contract
+from backend.modules.sourcing.models import RFQ, RFQResponse
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -1980,6 +1982,198 @@ def build_documents() -> list[Document]:
 # MAIN SEED FUNCTION
 # ===================================================================
 
+def build_contracts() -> list[Contract]:
+    """5 contracts with diverse types and statuses."""
+    from datetime import datetime, timedelta
+    today = datetime.now()
+    return [
+        Contract(
+            id=_id(),
+            contract_number="CTR2024-001",
+            title="Enterprise IT Services — Multi-Year Engagement",
+            supplier_name="TechMahindra Solutions Pvt Ltd",
+            contract_type="MSA",
+            status="ACTIVE",
+            start_date="2023-04-01",
+            end_date=(today + timedelta(days=180)).strftime("%Y-%m-%d"),
+            value=120000000,
+            currency="INR",
+            auto_renew=True,
+            renewal_notice_days=60,
+            department="TECH",
+            owner="Amit Sharma",
+            terms_summary="3-year master service agreement for IT infrastructure, application development, and support services. Includes SLA commitments of 99.5% uptime and dedicated support team.",
+        ),
+        Contract(
+            id=_id(),
+            contract_number="CTR2024-002",
+            title="Tax Advisory & Audit Consulting",
+            supplier_name="KPMG India Pvt Ltd",
+            contract_type="SOW",
+            status="ACTIVE",
+            start_date="2024-01-15",
+            end_date=(today + timedelta(days=45)).strftime("%Y-%m-%d"),
+            value=25000000,
+            currency="INR",
+            auto_renew=False,
+            renewal_notice_days=30,
+            department="FIN",
+            owner="Priya Menon",
+            terms_summary="Statement of Work for FY2024-25 tax advisory, GST compliance review, and internal audit support. Fixed fee with milestone-based payments.",
+        ),
+        Contract(
+            id=_id(),
+            contract_number="CTR2024-003",
+            title="Facilities Management — Corporate Offices",
+            supplier_name="Sodexo Facilities India Pvt Ltd",
+            contract_type="SLA",
+            status="ACTIVE",
+            start_date="2023-07-01",
+            end_date=(today + timedelta(days=365)).strftime("%Y-%m-%d"),
+            value=48000000,
+            currency="INR",
+            auto_renew=True,
+            renewal_notice_days=90,
+            department="ADMIN",
+            owner="Sunita Rao",
+            terms_summary="Service Level Agreement covering housekeeping, cafeteria, security, and maintenance for 12 corporate offices across 8 cities. Penalty clauses for SLA breaches.",
+        ),
+        Contract(
+            id=_id(),
+            contract_number="CTR2024-004",
+            title="Confidentiality Agreement — Internal Audit",
+            supplier_name="Deloitte Advisory LLP",
+            contract_type="NDA",
+            status="EXPIRED",
+            start_date="2023-01-01",
+            end_date=(today - timedelta(days=30)).strftime("%Y-%m-%d"),
+            value=0,
+            currency="INR",
+            auto_renew=False,
+            renewal_notice_days=30,
+            department="FIN",
+            owner="Priya Menon",
+            terms_summary="Non-disclosure agreement for internal audit engagement. Covers all financial data, system access credentials, and audit findings. 2-year post-termination obligation.",
+        ),
+        Contract(
+            id=_id(),
+            contract_number="CTR2024-005",
+            title="Infrastructure Modernization Project",
+            supplier_name="Wipro Infrastructure Engineering",
+            contract_type="MSA",
+            status="DRAFT",
+            start_date=today.strftime("%Y-%m-%d"),
+            end_date=(today + timedelta(days=730)).strftime("%Y-%m-%d"),
+            value=85000000,
+            currency="INR",
+            auto_renew=False,
+            renewal_notice_days=60,
+            department="TECH",
+            owner="Amit Sharma",
+            terms_summary="Draft MSA for data center migration, cloud adoption, and network modernization across all branches. Pending legal review and CTO approval.",
+        ),
+    ]
+
+
+def build_rfqs() -> tuple[list[RFQ], list[RFQResponse]]:
+    """3 RFQs with supplier responses."""
+    from datetime import datetime, timedelta
+    today = datetime.now()
+
+    rfq1_id = _id()
+    rfq2_id = _id()
+    rfq3_id = _id()
+
+    rfqs = [
+        RFQ(
+            id=rfq1_id,
+            rfq_number="RFQ2024-001",
+            title="Cloud Infrastructure Migration Services",
+            status="EVALUATION",
+            category="IT Services",
+            department="TECH",
+            budget_estimate=50000000,
+            submission_deadline=(today - timedelta(days=5)).strftime("%Y-%m-%d"),
+            evaluation_criteria=["Technical Capability", "Migration Experience", "Timeline", "Cost"],
+            created_by="Amit Sharma",
+        ),
+        RFQ(
+            id=rfq2_id,
+            rfq_number="RFQ2024-002",
+            title="Annual Stationery & Office Supplies",
+            status="PUBLISHED",
+            category="Office Supplies",
+            department="ADMIN",
+            budget_estimate=5000000,
+            submission_deadline=(today + timedelta(days=15)).strftime("%Y-%m-%d"),
+            evaluation_criteria=["Price", "Quality", "Delivery Reliability"],
+            created_by="Sunita Rao",
+        ),
+        RFQ(
+            id=rfq3_id,
+            rfq_number="RFQ2024-003",
+            title="Cybersecurity Assessment & Penetration Testing",
+            status="AWARDED",
+            category="IT Security",
+            department="TECH",
+            budget_estimate=15000000,
+            submission_deadline=(today - timedelta(days=30)).strftime("%Y-%m-%d"),
+            evaluation_criteria=["Certifications", "Methodology", "Past Experience", "Cost"],
+            created_by="Amit Sharma",
+        ),
+    ]
+
+    responses = [
+        # RFQ1 — 3 responses (evaluation phase)
+        RFQResponse(
+            id=_id(), rfq_id=rfq1_id, supplier_name="TechMahindra Solutions Pvt Ltd",
+            quoted_amount=42000000, delivery_timeline="16 weeks",
+            technical_score=88, commercial_score=82, total_score=85.6,
+            status="SUBMITTED", notes="Strong Azure migration experience",
+            submitted_at=(today - timedelta(days=7)).strftime("%Y-%m-%d"),
+        ),
+        RFQResponse(
+            id=_id(), rfq_id=rfq1_id, supplier_name="Infosys BPM Ltd",
+            quoted_amount=38000000, delivery_timeline="20 weeks",
+            technical_score=82, commercial_score=90, total_score=85.2,
+            status="SUBMITTED", notes="Competitive pricing, longer timeline",
+            submitted_at=(today - timedelta(days=6)).strftime("%Y-%m-%d"),
+        ),
+        RFQResponse(
+            id=_id(), rfq_id=rfq1_id, supplier_name="Wipro Infrastructure Engineering",
+            quoted_amount=48000000, delivery_timeline="12 weeks",
+            technical_score=92, commercial_score=75, total_score=85.2,
+            status="SUBMITTED", notes="Premium pricing but fastest delivery",
+            submitted_at=(today - timedelta(days=8)).strftime("%Y-%m-%d"),
+        ),
+        # RFQ2 — 1 response (still open)
+        RFQResponse(
+            id=_id(), rfq_id=rfq2_id, supplier_name="Gujarat Stationers Pvt Ltd",
+            quoted_amount=4200000, delivery_timeline="Monthly batches",
+            technical_score=75, commercial_score=92, total_score=81.8,
+            status="SUBMITTED", notes="Established local supplier",
+            submitted_at=(today - timedelta(days=2)).strftime("%Y-%m-%d"),
+        ),
+        # RFQ3 — 2 responses (awarded)
+        RFQResponse(
+            id=_id(), rfq_id=rfq3_id, supplier_name="KPMG India Pvt Ltd",
+            quoted_amount=12500000, delivery_timeline="8 weeks",
+            technical_score=95, commercial_score=85, total_score=91.0,
+            status="AWARDED", notes="CISA, CISSP certified team. Led assessment for 3 banks.",
+            submitted_at=(today - timedelta(days=35)).strftime("%Y-%m-%d"),
+        ),
+        RFQResponse(
+            id=_id(), rfq_id=rfq3_id, supplier_name="Deloitte Advisory LLP",
+            quoted_amount=14000000, delivery_timeline="10 weeks",
+            technical_score=90, commercial_score=78, total_score=85.2,
+            status="REJECTED", notes="Strong team but higher cost",
+            submitted_at=(today - timedelta(days=33)).strftime("%Y-%m-%d"),
+        ),
+    ]
+
+    return rfqs, responses
+
+
 async def seed():
     """Create all tables and insert seed data."""
     # Create all tables
@@ -2073,6 +2267,18 @@ async def seed():
         docs = build_documents()
         session.add_all(docs)
         print(f"  + {len(docs)} document records")
+
+        # ── Contracts ─────────────────────────────────────────
+        contracts = build_contracts()
+        session.add_all(contracts)
+        print(f"  + {len(contracts)} contracts")
+
+        # ── Sourcing / RFQs ──────────────────────────────────
+        rfqs, rfq_responses = build_rfqs()
+        session.add_all(rfqs)
+        await session.flush()
+        session.add_all(rfq_responses)
+        print(f"  + {len(rfqs)} RFQs ({len(rfq_responses)} responses)")
 
         # ── Commit ─────────────────────────────────────────────
         await session.commit()

@@ -84,8 +84,8 @@ export default function PurchaseRequests() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Purchase Requests</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Replaces Oracle EBS iProcurement module</p>
+          <h1 className="text-xl font-bold text-warmgray-900">Purchase Requests</h1>
+          <p className="text-sm text-warmgray-500 mt-0.5">Replaces Oracle EBS iProcurement module</p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <Plus className="w-4 h-4" /> New PR
@@ -96,7 +96,7 @@ export default function PurchaseRequests() {
       <div className="flex gap-2 flex-wrap">
         {['ALL','PENDING_APPROVAL','APPROVED','REJECTED','PO_CREATED'].map(s => (
           <button key={s}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === s ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === s ? 'bg-brand-500 text-white' : 'bg-white text-warmgray-600 border border-warmgray-200 hover:bg-warmgray-50'}`}
             onClick={() => setFilter(s)}>
             {s.replace(/_/g, ' ')} {s === 'ALL' ? `(${prs.length})` : `(${prs.filter(p => p.status === s).length})`}
           </button>
@@ -105,46 +105,46 @@ export default function PurchaseRequests() {
 
       {/* Create PR form */}
       {showForm && (
-        <div className="card border-blue-200 bg-blue-50">
-          <h2 className="text-sm font-semibold text-blue-900 mb-4 flex items-center gap-2">
+        <div className="card border-brand-200 bg-brand-50">
+          <h2 className="text-sm font-semibold text-brand-900 mb-4 flex items-center gap-2">
             <Plus className="w-4 h-4" /> New Purchase Request
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
-                <label className="block text-xs font-medium text-gray-700 mb-1">PR Title</label>
-                <input className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                <label className="block text-xs font-medium text-warmgray-700 mb-1">PR Title</label>
+                <input className="w-full px-3 py-2 text-sm border border-warmgray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
                   placeholder="e.g. Cloud infrastructure upgrade Q4"
                   value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Department</label>
-                <select className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                <label className="block text-xs font-medium text-warmgray-700 mb-1">Department</label>
+                <select className="w-full px-3 py-2 text-sm border border-warmgray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
                   value={form.department} onChange={e => handleDeptChange(e.target.value)}>
                   {DEPTS.map(d => <option key={d.code} value={d.code}>{d.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Amount (₹)</label>
-                <input type="number" className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                <label className="block text-xs font-medium text-warmgray-700 mb-1">Amount (₹)</label>
+                <input type="number" className="w-full px-3 py-2 text-sm border border-warmgray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
                   placeholder="500000"
                   value={form.amount} onChange={e => handleAmountChange(e.target.value)} required />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
-                <select className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                <label className="block text-xs font-medium text-warmgray-700 mb-1">Category</label>
+                <select className="w-full px-3 py-2 text-sm border border-warmgray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
                   value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
                   {['IT Services','Consulting','Facilities Management','Office Supplies','Printing & Marketing','Others'].map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Requester</label>
-                <input className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                <label className="block text-xs font-medium text-warmgray-700 mb-1">Requester</label>
+                <input className="w-full px-3 py-2 text-sm border border-warmgray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
                   value={form.requester} onChange={e => setForm(f => ({ ...f, requester: e.target.value }))} />
               </div>
               <div className="col-span-2">
-                <label className="block text-xs font-medium text-gray-700 mb-1">Business Justification</label>
-                <textarea rows={2} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white resize-none"
+                <label className="block text-xs font-medium text-warmgray-700 mb-1">Business Justification</label>
+                <textarea rows={2} className="w-full px-3 py-2 text-sm border border-warmgray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white resize-none"
                   placeholder="Explain why this purchase is needed"
                   value={form.justification} onChange={e => setForm(f => ({ ...f, justification: e.target.value }))} required />
               </div>
@@ -156,7 +156,7 @@ export default function PurchaseRequests() {
                 <div className={`font-semibold ${budgetCheck.status === 'APPROVED' ? 'text-green-800' : 'text-red-800'}`}>
                   {budgetCheck.status === 'APPROVED' ? '✓ Budget check PASSED' : '✗ Budget check FAILED — Insufficient funds'}
                 </div>
-                <div className="text-gray-600 text-xs mt-1 space-y-0.5">
+                <div className="text-warmgray-600 text-xs mt-1 space-y-0.5">
                   <div>Available: <span className="font-medium">{fmtInr(budgetCheck.available_amount)}</span> of <span className="font-medium">{fmtInr(budgetCheck.total_budget)}</span> ({budgetCheck.dept_name})</div>
                   <div>Utilization after approval: <span className="font-medium">{budgetCheck.utilization_after_pct}%</span></div>
                 </div>
@@ -175,66 +175,68 @@ export default function PurchaseRequests() {
 
       {/* PR Table */}
       <div className="card p-0 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-100">
-            <tr>
-              {['PR #','Title','Department','Amount','Status','Budget','Requester',''].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {filtered.map(pr => (
-              <tr key={pr.id} className="table-row-hover" onClick={() => setSelected(selected?.id === pr.id ? null : pr)}>
-                <td className="px-4 py-3 font-mono text-xs text-blue-600 font-medium">{pr.id}</td>
-                <td className="px-4 py-3 max-w-[200px]">
-                  <div className="font-medium text-gray-800 truncate">{pr.title}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{pr.category}</div>
-                </td>
-                <td className="px-4 py-3 text-gray-600 text-xs">{pr.department}</td>
-                <td className="px-4 py-3 font-medium text-gray-800">{fmtInr(pr.amount)}</td>
-                <td className="px-4 py-3">
-                  <span className={STATUS_BADGE[pr.status] || 'badge badge-gray'}>
-                    {STATUS_ICON[pr.status]} <span className="ml-1">{pr.status.replace(/_/g,' ')}</span>
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`badge ${pr.budget_check === 'APPROVED' ? 'badge-green' : 'badge-red'}`}>
-                    {pr.budget_check === 'APPROVED' ? '✓ OK' : '✗ Fail'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-xs text-gray-500">{pr.requester}</td>
-                <td className="px-4 py-3">
-                  {pr.status === 'PENDING_APPROVAL' && (
-                    <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-                      <button className="btn-success text-xs py-1 px-2"
-                        onClick={() => approvePR(pr.id).then(load)}>Approve</button>
-                      <button className="btn-danger text-xs py-1 px-2"
-                        onClick={() => rejectPR(pr.id).then(load)}>Reject</button>
-                    </div>
-                  )}
-                </td>
+        <div className="table-wrapper">
+          <table className="w-full text-sm">
+            <thead className="bg-warmgray-50 border-b border-warmgray-100">
+              <tr>
+                {['PR #','Title','Department','Amount','Status','Budget','Requester',''].map(h => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-warmgray-500 uppercase tracking-wide">{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-warmgray-50">
+              {filtered.map(pr => (
+                <tr key={pr.id} className="table-row-hover" onClick={() => setSelected(selected?.id === pr.id ? null : pr)}>
+                  <td className="px-4 py-3 font-mono text-xs text-brand-600 font-medium">{pr.id}</td>
+                  <td className="px-4 py-3 max-w-[200px]">
+                    <div className="font-medium text-warmgray-800 truncate">{pr.title}</div>
+                    <div className="text-xs text-warmgray-400 mt-0.5">{pr.category}</div>
+                  </td>
+                  <td className="px-4 py-3 text-warmgray-600 text-xs">{pr.department}</td>
+                  <td className="px-4 py-3 font-medium text-warmgray-800">{fmtInr(pr.amount)}</td>
+                  <td className="px-4 py-3">
+                    <span className={STATUS_BADGE[pr.status] || 'badge badge-gray'}>
+                      {STATUS_ICON[pr.status]} <span className="ml-1">{pr.status.replace(/_/g,' ')}</span>
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`badge ${pr.budget_check === 'APPROVED' ? 'badge-green' : 'badge-red'}`}>
+                      {pr.budget_check === 'APPROVED' ? '✓ OK' : '✗ Fail'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-warmgray-500">{pr.requester}</td>
+                  <td className="px-4 py-3">
+                    {pr.status === 'PENDING_APPROVAL' && (
+                      <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                        <button className="btn-success text-xs py-1 px-2"
+                          onClick={() => approvePR(pr.id).then(load)}>Approve</button>
+                        <button className="btn-danger text-xs py-1 px-2"
+                          onClick={() => rejectPR(pr.id).then(load)}>Reject</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* PR Detail panel */}
       {selected && (
-        <div className="card border-blue-200">
-          <h3 className="text-sm font-semibold text-gray-800 mb-3">{selected.title}</h3>
+        <div className="card border-brand-200">
+          <h3 className="text-sm font-semibold text-warmgray-800 mb-3">{selected.title}</h3>
           <div className="grid grid-cols-3 gap-4 text-sm mb-4">
-            <div><span className="text-gray-500 text-xs">PR ID</span><br /><span className="font-mono">{selected.id}</span></div>
-            <div><span className="text-gray-500 text-xs">Amount</span><br /><span className="font-medium">{fmtInr(selected.amount)}</span></div>
-            <div><span className="text-gray-500 text-xs">GL Account</span><br /><span className="font-mono text-xs">{selected.gl_account}</span></div>
-            <div><span className="text-gray-500 text-xs">Cost Centre</span><br /><span className="font-mono text-xs">{selected.cost_center}</span></div>
-            {selected.po_id && <div><span className="text-gray-500 text-xs">PO Created</span><br /><span className="font-mono text-blue-600 text-xs">{selected.po_id}</span></div>}
-            {selected.approver && <div><span className="text-gray-500 text-xs">Approved By</span><br /><span className="text-xs">{selected.approver}</span></div>}
+            <div><span className="text-warmgray-500 text-xs">PR ID</span><br /><span className="font-mono">{selected.id}</span></div>
+            <div><span className="text-warmgray-500 text-xs">Amount</span><br /><span className="font-medium">{fmtInr(selected.amount)}</span></div>
+            <div><span className="text-warmgray-500 text-xs">GL Account</span><br /><span className="font-mono text-xs">{selected.gl_account}</span></div>
+            <div><span className="text-warmgray-500 text-xs">Cost Centre</span><br /><span className="font-mono text-xs">{selected.cost_center}</span></div>
+            {selected.po_id && <div><span className="text-warmgray-500 text-xs">PO Created</span><br /><span className="font-mono text-brand-600 text-xs">{selected.po_id}</span></div>}
+            {selected.approver && <div><span className="text-warmgray-500 text-xs">Approved By</span><br /><span className="text-xs">{selected.approver}</span></div>}
           </div>
           {selected.justification && (
-            <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700">
-              <span className="text-xs font-medium text-gray-500">Justification: </span>{selected.justification}
+            <div className="bg-warmgray-50 rounded-lg p-3 text-sm text-warmgray-700">
+              <span className="text-xs font-medium text-warmgray-500">Justification: </span>{selected.justification}
             </div>
           )}
           {selected.rejection_reason && (
@@ -244,20 +246,22 @@ export default function PurchaseRequests() {
           )}
           {selected.items?.length > 0 && (
             <div className="mt-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Line Items</p>
-              <table className="w-full text-xs">
-                <thead><tr className="text-gray-400">
-                  <th className="text-left py-1">Description</th><th className="text-right py-1">Qty</th><th className="text-right py-1">Unit Price</th><th className="text-right py-1">Total</th>
-                </tr></thead>
-                <tbody>{selected.items.map((item, i) => (
-                  <tr key={i} className="border-t border-gray-100">
-                    <td className="py-1.5 text-gray-700">{item.desc}</td>
-                    <td className="py-1.5 text-right">{item.qty} {item.unit}</td>
-                    <td className="py-1.5 text-right">{fmtInr(item.unit_price)}</td>
-                    <td className="py-1.5 text-right font-medium">{fmtInr(item.qty * item.unit_price)}</td>
-                  </tr>
-                ))}</tbody>
-              </table>
+              <p className="text-xs font-semibold text-warmgray-500 uppercase mb-2">Line Items</p>
+              <div className="table-wrapper">
+                <table className="w-full text-xs">
+                  <thead><tr className="text-warmgray-400">
+                    <th className="text-left py-1">Description</th><th className="text-right py-1">Qty</th><th className="text-right py-1">Unit Price</th><th className="text-right py-1">Total</th>
+                  </tr></thead>
+                  <tbody>{selected.items.map((item, i) => (
+                    <tr key={i} className="border-t border-warmgray-100">
+                      <td className="py-1.5 text-warmgray-700">{item.desc}</td>
+                      <td className="py-1.5 text-right">{item.qty} {item.unit}</td>
+                      <td className="py-1.5 text-right">{fmtInr(item.unit_price)}</td>
+                      <td className="py-1.5 text-right font-medium">{fmtInr(item.qty * item.unit_price)}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
