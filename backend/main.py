@@ -257,6 +257,18 @@ def health():
     }
 
 
+@app.post("/api/seed")
+async def trigger_seed():
+    """Manual seed trigger — for ephemeral Render instances."""
+    from backend.seed import seed as _seed_db
+    try:
+        await _seed_db()
+        return {"status": "ok", "message": "Database seeded"}
+    except Exception as e:
+        import traceback
+        return {"status": "error", "message": str(e), "trace": traceback.format_exc()}
+
+
 # ─────────────────────────────────────────────────────────────────
 # Dashboard (fully DB-backed)
 # ─────────────────────────────────────────────────────────────────
