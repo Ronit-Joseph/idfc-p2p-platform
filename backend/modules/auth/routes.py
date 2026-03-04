@@ -7,12 +7,12 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.config import settings
-from backend.dependencies import get_db, get_current_user
+from backend.dependencies import get_db, get_current_user, require_role, paginate
 from backend.exceptions import AuthenticationError, AuthorizationError
 from backend.modules.auth.constants import ADMIN
 from backend.modules.auth.models import User
@@ -38,7 +38,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=UserResponse, status_code=201)
-async def register(data: UserCreate, db: AsyncSession = Depends(get_db)):
+async def register(data: UserCreate, db: AsyncSession = Depends(get_db), _user: Dict[str, Any] = Depends(require_role("ADMIN"))):
     """Create a new user account."""
     user = await create_user(db, data)
     return user
@@ -118,8 +118,10 @@ async def me(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/users", response_model=List[UserResponse])
+@router.get("/users")
 async def list_users(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     current_user: Dict[str, Any] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -129,4 +131,4 @@ async def list_users(
         raise AuthorizationError("Only admins can list users")
 
     users = await get_all_users(db)
-    return users
+    return paginate(users, skip, limit)

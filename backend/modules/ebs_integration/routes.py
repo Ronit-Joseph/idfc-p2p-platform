@@ -16,7 +16,7 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db, get_current_user
+from backend.dependencies import get_db, get_current_user, require_role
 from backend.modules.ebs_integration.schemas import EBSEventResponse, EBSRetryResponse
 from backend.modules.ebs_integration import service
 
@@ -49,7 +49,7 @@ async def list_ebs_events(
 async def retry_ebs_event(
     event_id: str,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("ADMIN")),
 ) -> EBSRetryResponse:
     """Retry a FAILED EBS integration event.
 

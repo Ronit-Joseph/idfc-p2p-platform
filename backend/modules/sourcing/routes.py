@@ -6,12 +6,12 @@ Endpoints: list RFQs, detail, create, publish, add response, award, comparison.
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db
+from backend.dependencies import get_db, get_current_user, require_role
 from backend.modules.sourcing import service
 from backend.modules.sourcing.schemas import RFQCreate, RFQResponseCreate
 
@@ -53,6 +53,7 @@ def _resp_dict(r):
 async def list_rfqs(
     status: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
+    _user: Dict[str, Any] = Depends(get_current_user),
 ):
     rfqs = await service.list_rfqs(db, status=status)
     items = [_rfq_dict(r) for r in rfqs]
@@ -76,7 +77,7 @@ async def list_rfqs(
 
 
 @router.get("/rfqs/{rfq_id}")
-async def get_rfq(rfq_id: str, db: AsyncSession = Depends(get_db)):
+async def get_rfq(rfq_id: str, db: AsyncSession = Depends(get_db), _user: Dict[str, Any] = Depends(get_current_user)):
     rfq = await service.get_rfq(db, rfq_id)
     if not rfq:
         raise HTTPException(status_code=404, detail="RFQ not found")
@@ -87,13 +88,13 @@ async def get_rfq(rfq_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/rfqs", status_code=201)
-async def create_rfq(body: RFQCreate, db: AsyncSession = Depends(get_db)):
+async def create_rfq(body: RFQCreate, db: AsyncSession = Depends(get_db), _user: Dict[str, Any] = Depends(require_role("PROCUREMENT_MANAGER"))):
     rfq = await service.create_rfq(db, body.model_dump())
     return {"id": rfq.rfq_number, "rfq_number": rfq.rfq_number, "status": rfq.status}
 
 
 @router.post("/rfqs/{rfq_id}/publish")
-async def publish_rfq(rfq_id: str, db: AsyncSession = Depends(get_db)):
+async def publish_rfq(rfq_id: str, db: AsyncSession = Depends(get_db), _user: Dict[str, Any] = Depends(require_role("PROCUREMENT_MANAGER"))):
     rfq = await service.publish_rfq(db, rfq_id)
     if not rfq:
         raise HTTPException(status_code=400, detail="Cannot publish (not in DRAFT status or not found)")
@@ -101,7 +102,7 @@ async def publish_rfq(rfq_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/rfqs/{rfq_id}/responses")
-async def add_response(rfq_id: str, body: RFQResponseCreate, db: AsyncSession = Depends(get_db)):
+async def add_response(rfq_id: str, body: RFQResponseCreate, db: AsyncSession = Depends(get_db), _user: Dict[str, Any] = Depends(require_role("DEPARTMENT_HEAD"))):
     resp = await service.add_response(db, rfq_id, body.model_dump())
     if not resp:
         raise HTTPException(status_code=404, detail="RFQ not found")
@@ -109,7 +110,7 @@ async def add_response(rfq_id: str, body: RFQResponseCreate, db: AsyncSession = 
 
 
 @router.post("/rfqs/{rfq_id}/award")
-async def award_rfq(rfq_id: str, response_id: str, db: AsyncSession = Depends(get_db)):
+async def award_rfq(rfq_id: str, response_id: str, db: AsyncSession = Depends(get_db), _user: Dict[str, Any] = Depends(require_role("FINANCE_HEAD"))):
     rfq = await service.award_rfq(db, rfq_id, response_id)
     if not rfq:
         raise HTTPException(status_code=404, detail="RFQ not found")
@@ -117,7 +118,7 @@ async def award_rfq(rfq_id: str, response_id: str, db: AsyncSession = Depends(ge
 
 
 @router.get("/rfqs/{rfq_id}/comparison")
-async def bid_comparison(rfq_id: str, db: AsyncSession = Depends(get_db)):
+async def bid_comparison(rfq_id: str, db: AsyncSession = Depends(get_db), _user: Dict[str, Any] = Depends(get_current_user)):
     rfq = await service.get_rfq(db, rfq_id)
     if not rfq:
         raise HTTPException(status_code=404, detail="RFQ not found")

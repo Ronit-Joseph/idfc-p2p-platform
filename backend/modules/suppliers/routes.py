@@ -11,10 +11,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db, get_current_user
+from backend.dependencies import get_db, get_current_user, require_role, paginate
 from backend.exceptions import NotFoundError
 from backend.modules.suppliers.schemas import (
     SupplierCreate,
@@ -31,14 +31,16 @@ router = APIRouter(prefix="/api/suppliers", tags=["suppliers"])
 # GET  /api/suppliers
 # ---------------------------------------------------------------------------
 
-@router.get("", response_model=List[SupplierResponse])
+@router.get("")
 async def list_suppliers(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _user: Dict[str, Any] = Depends(get_current_user),
-) -> List[SupplierResponse]:
+):
     """Return all suppliers."""
     suppliers = await service.list_suppliers(db)
-    return [SupplierResponse.model_validate(s) for s in suppliers]
+    return paginate([SupplierResponse.model_validate(s) for s in suppliers], skip, limit)
 
 
 # ---------------------------------------------------------------------------
@@ -79,7 +81,7 @@ async def get_supplier(
 async def create_supplier(
     payload: SupplierCreate,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("PROCUREMENT_MANAGER")),
 ) -> SupplierResponse:
     """Create a new supplier.  A code (e.g. "SUP016") is auto-generated."""
     supplier = await service.create_supplier(db, payload)
@@ -95,7 +97,7 @@ async def update_supplier(
     sid: str,
     payload: SupplierUpdate,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("PROCUREMENT_MANAGER")),
 ) -> SupplierResponse:
     """Partially update a supplier identified by its code."""
     supplier = await service.update_supplier(db, sid, payload)

@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.event_bus import Event, event_bus
 from backend.modules.payments.models import Payment, PaymentRun
+from backend.state_machines import validate_transition, validate_maker_checker
 from backend.modules.invoices.models import Invoice
 from backend.modules.suppliers.models import Supplier
 
@@ -145,6 +146,8 @@ async def process_payment_run(
     if not next_status:
         raise ValueError(f"Cannot advance run from {run.status}")
 
+    validate_transition("payment_run", run.status, next_status)
+    validate_maker_checker(run.initiated_by, approved_by, "payment_run")
     run.status = next_status
     if next_status == "SCHEDULED":
         run.approved_by = approved_by
@@ -157,6 +160,7 @@ async def process_payment_run(
             select(Payment).where(Payment.payment_run_id == run.id)
         )
         for pay in pay_result.scalars().all():
+            validate_transition("payment", pay.status, "COMPLETED")
             pay.status = "COMPLETED"
             pay.payment_date = datetime.utcnow()
             pay.bank_reference = f"UTR{run.run_number[-4:]}{pay.payment_number[-6:]}"

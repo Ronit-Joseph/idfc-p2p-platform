@@ -348,23 +348,41 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)):
     )
     budgets = list(budgets_result.scalars().all())
 
-    # ── Static / hardcoded trend data ─────────────────────────────
-    monthly_trend = [
-        {"month": "Apr", "spend": 14200000},
-        {"month": "May", "spend": 18900000},
-        {"month": "Jun", "spend": 12400000},
-        {"month": "Jul", "spend": 22100000},
-        {"month": "Aug", "spend": 19800000},
-        {"month": "Sep", "spend": mtd_spend},
-    ]
-    spend_by_category = [
-        {"category": "IT Services", "amount": 28500000, "pct": 38},
-        {"category": "Consulting", "amount": 19200000, "pct": 26},
-        {"category": "Facilities Mgmt", "amount": 12800000, "pct": 17},
-        {"category": "Office Supplies", "amount": 6400000, "pct": 9},
-        {"category": "Printing & Mktg", "amount": 5100000, "pct": 7},
-        {"category": "Others", "amount": 2200000, "pct": 3},
-    ]
+    # ── Compute trend & category from real invoice data ───────────
+    from collections import defaultdict as _dd
+
+    _paid = {"APPROVED", "POSTED_TO_EBS", "PAID"}
+    _cat_spend = _dd(float)
+    _month_spend = _dd(float)
+    for inv in all_invoices:
+        if inv.status in _paid:
+            # Category spend — join supplier
+            _cat_spend["Others"] += inv.net_payable or 0  # default
+            # Monthly trend
+            if inv.created_at:
+                _month_spend[inv.created_at.strftime("%b")] += inv.net_payable or 0
+
+    # Fetch supplier categories for real category aggregation
+    _inv_with_sup = await db.execute(
+        select(Invoice.net_payable, Supplier.category)
+        .outerjoin(Supplier, Invoice.supplier_id == Supplier.id)
+        .where(Invoice.status.in_(_paid))
+    )
+    _cat_spend2 = _dd(float)
+    for net, cat in _inv_with_sup.all():
+        _cat_spend2[cat or "Others"] += net or 0
+    total_spend = sum(_cat_spend2.values()) or 1
+
+    spend_by_category = sorted(
+        [{"category": k, "amount": v, "pct": round(v / total_spend * 100)}
+         for k, v in _cat_spend2.items()],
+        key=lambda x: x["amount"], reverse=True,
+    )
+
+    monthly_trend = [{"month": m, "spend": _month_spend.get(m, 0)}
+                     for m in ["Apr", "May", "Jun", "Jul", "Aug", "Sep",
+                               "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"]
+                     if _month_spend.get(m, 0) > 0] or [{"month": "MTD", "spend": mtd_spend}]
 
     # ── Alerts (computed from DB data) ────────────────────────────
     alerts: List[Dict[str, Any]] = []
@@ -709,58 +727,112 @@ async def apply_ai_insight(insight_id: str, db: AsyncSession = Depends(get_db)):
 
 @app.get("/api/analytics/spend")
 async def get_spend_analytics(db: AsyncSession = Depends(get_db)):
-    """Spend analytics dashboard (legacy shape)."""
+    """Spend analytics dashboard — computed from real DB data."""
+    from collections import defaultdict
+
+    # Fetch all invoices with their supplier details
+    inv_result = await db.execute(
+        select(Invoice, Supplier.legal_name, Supplier.category)
+        .outerjoin(Supplier, Invoice.supplier_id == Supplier.id)
+    )
+    rows = inv_result.all()
+
+    paid_statuses = {"APPROVED", "POSTED_TO_EBS", "PAID"}
+
+    # ── Spend by category ──────────────────────────────────────
+    cat_agg = defaultdict(lambda: {"amount": 0, "invoices": 0, "vendors": set()})
+    for inv, sup_name, sup_cat in rows:
+        if inv.status in paid_statuses:
+            cat = sup_cat or "Others"
+            cat_agg[cat]["amount"] += inv.net_payable or 0
+            cat_agg[cat]["invoices"] += 1
+            cat_agg[cat]["vendors"].add(sup_name)
+
+    spend_by_category = sorted(
+        [{"category": k, "amount": v["amount"], "invoices": v["invoices"],
+          "vendors": len(v["vendors"])} for k, v in cat_agg.items()],
+        key=lambda x: x["amount"], reverse=True,
+    )
+
+    # ── Monthly trend ──────────────────────────────────────────
+    month_agg = defaultdict(lambda: defaultdict(float))
+    for inv, _name, sup_cat in rows:
+        if inv.status in paid_statuses and inv.created_at:
+            month_key = inv.created_at.strftime("%b %y")
+            cat = (sup_cat or "Others").lower().replace(" ", "_")[:12]
+            month_agg[month_key][cat] += inv.net_payable or 0
+
+    monthly_trend = []
+    for month_key in sorted(month_agg.keys()):
+        entry = {"month": month_key}
+        entry.update(month_agg[month_key])
+        monthly_trend.append(entry)
+
+    # ── Top vendors ────────────────────────────────────────────
+    vendor_agg = defaultdict(lambda: {"amount": 0, "invoices": 0, "paid_on_time": 0})
+    for inv, sup_name, _cat in rows:
+        if inv.status in paid_statuses:
+            name = sup_name or "Unknown"
+            vendor_agg[name]["amount"] += inv.net_payable or 0
+            vendor_agg[name]["invoices"] += 1
+            if inv.msme_status != "BREACHED":
+                vendor_agg[name]["paid_on_time"] += 1
+
+    top_vendors = sorted(
+        [{"name": k,
+          "amount": v["amount"],
+          "invoices": v["invoices"],
+          "on_time_pct": round(v["paid_on_time"] / v["invoices"] * 100, 1) if v["invoices"] else 0,
+          } for k, v in vendor_agg.items()],
+        key=lambda x: x["amount"], reverse=True,
+    )[:10]
+
+    # ── Budget vs actual ───────────────────────────────────────
+    budget_result = await db.execute(select(Budget).order_by(Budget.department_code))
+    budgets = list(budget_result.scalars().all())
+    budget_vs_actual = [
+        {"dept": b.department_name, "budget": b.total_amount,
+         "committed": b.committed_amount, "actual": b.actual_amount}
+        for b in budgets
+    ]
+
+    # ── KPIs ───────────────────────────────────────────────────
+    total_invoices = len(rows)
+    matched_3way = sum(1 for inv, _, _ in rows if inv.match_status and "3WAY" in (inv.match_status or ""))
+    matched_total = sum(1 for inv, _, _ in rows if inv.match_status and "MATCH" in (inv.match_status or ""))
+    with_po = sum(1 for inv, _, _ in rows if inv.po_id is not None)
+
+    kpis = {
+        "invoice_cycle_time_days": round(
+            sum(
+                (inv.approved_at - inv.created_at).total_seconds() / 86400
+                for inv, _, _ in rows
+                if inv.approved_at and inv.created_at
+            ) / max(sum(1 for inv, _, _ in rows if inv.approved_at), 1), 1
+        ),
+        "three_way_match_rate_pct": round(matched_3way / max(matched_total, 1) * 100, 1),
+        "auto_approval_rate_pct": round(
+            sum(1 for inv, _, _ in rows if inv.status in paid_statuses and inv.coding_agent_confidence and inv.coding_agent_confidence > 90)
+            / max(total_invoices, 1) * 100, 1
+        ),
+        "early_payment_savings_mtd": sum(
+            inv.net_payable * 0.02
+            for inv, _, _ in rows
+            if inv.status == "PAID" and inv.cash_opt_suggestion
+        ),
+        "maverick_spend_pct": round(
+            sum(inv.net_payable or 0 for inv, _, _ in rows if inv.status in paid_statuses and not inv.po_id)
+            / max(sum(inv.net_payable or 0 for inv, _, _ in rows if inv.status in paid_statuses), 1) * 100, 1
+        ),
+        "po_coverage_pct": round(with_po / max(total_invoices, 1) * 100, 1),
+    }
+
     return {
-        "spend_by_category": [
-            {"category": "IT Services", "amount": 28500000, "invoices": 45, "vendors": 5},
-            {"category": "Consulting", "amount": 19200000, "invoices": 28, "vendors": 3},
-            {"category": "Facilities Mgmt", "amount": 12800000, "invoices": 36, "vendors": 4},
-            {"category": "Office Supplies", "amount": 6400000, "invoices": 62, "vendors": 5},
-            {"category": "Printing & Mktg", "amount": 5100000, "invoices": 18, "vendors": 2},
-            {"category": "Others", "amount": 2200000, "invoices": 12, "vendors": 2},
-        ],
-        "monthly_trend": [
-            {"month": "Apr 24", "it": 5200000, "consulting": 3100000,
-             "facilities": 2400000, "other": 3500000},
-            {"month": "May 24", "it": 6800000, "consulting": 4200000,
-             "facilities": 2200000, "other": 5700000},
-            {"month": "Jun 24", "it": 4100000, "consulting": 2800000,
-             "facilities": 2100000, "other": 3400000},
-            {"month": "Jul 24", "it": 8200000, "consulting": 5100000,
-             "facilities": 3100000, "other": 5700000},
-            {"month": "Aug 24", "it": 7400000, "consulting": 4600000,
-             "facilities": 2800000, "other": 5000000},
-            {"month": "Sep 24", "it": 4500000, "consulting": 1800000,
-             "facilities": 0, "other": 0},
-        ],
-        "top_vendors": [
-            {"name": "TechMahindra Solutions", "amount": 12400000,
-             "invoices": 18, "on_time_pct": 98},
-            {"name": "Deloitte Advisory LLP", "amount": 9800000,
-             "invoices": 12, "on_time_pct": 100},
-            {"name": "KPMG India Pvt Ltd", "amount": 8400000,
-             "invoices": 10, "on_time_pct": 95},
-            {"name": "Infosys BPM Ltd", "amount": 7200000,
-             "invoices": 14, "on_time_pct": 97},
-            {"name": "Sodexo Facilities India", "amount": 6800000,
-             "invoices": 24, "on_time_pct": 99},
-        ],
-        "budget_vs_actual": [
-            {"dept": "Technology", "budget": 80000000, "committed": 22000000, "actual": 30000000},
-            {"dept": "Operations", "budget": 40000000, "committed": 8000000, "actual": 12000000},
-            {"dept": "Finance", "budget": 30000000, "committed": 5000000, "actual": 10500000},
-            {"dept": "Marketing", "budget": 20000000, "committed": 4000000, "actual": 8000000},
-            {"dept": "HR", "budget": 10000000, "committed": 1500000, "actual": 2500000},
-            {"dept": "Admin", "budget": 15000000, "committed": 3000000, "actual": 8000000},
-        ],
-        "kpis": {
-            "invoice_cycle_time_days": 4.2,
-            "three_way_match_rate_pct": 81.4,
-            "auto_approval_rate_pct": 34.2,
-            "early_payment_savings_mtd": 87500,
-            "maverick_spend_pct": 6.3,
-            "po_coverage_pct": 73.8,
-        },
+        "spend_by_category": spend_by_category,
+        "monthly_trend": monthly_trend,
+        "top_vendors": top_vendors,
+        "budget_vs_actual": budget_vs_actual,
+        "kpis": kpis,
     }
 
 

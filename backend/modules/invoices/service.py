@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.event_bus import Event, event_bus
 from backend.exceptions import NotFoundError, ValidationError
+from backend.state_machines import validate_transition, validate_maker_checker
 from backend.modules.gst_cache.models import GSTRecord
 from backend.modules.invoices.models import Invoice
 from backend.modules.purchase_orders.models import (
@@ -417,6 +418,7 @@ async def get_invoice_by_id(
 async def approve_invoice(
     db: AsyncSession,
     inv_id: str,
+    approved_by: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Approve an invoice that is currently in PENDING_APPROVAL or MATCHED status.
 
@@ -428,7 +430,8 @@ async def approve_invoice(
     Publishes ``invoice.approved`` event.
 
     Raises ``NotFoundError`` if the invoice does not exist.
-    Raises ``ValidationError`` if the invoice is not in an approvable status.
+    Raises ``ValidationError`` if the invoice is not in an approvable status
+        or if the approver is the same as the uploader (maker-checker).
     """
     inv = await _load_invoice_by_number(db, inv_id)
     if inv is None:
@@ -441,9 +444,12 @@ async def approve_invoice(
             f"expected one of {', '.join(sorted(approvable_statuses))}"
         )
 
+    validate_transition("invoice", inv.status, "APPROVED")
+    validate_maker_checker(inv.uploaded_by, approved_by, "invoice")
+
     now = datetime.now(timezone.utc)
     inv.status = "APPROVED"
-    inv.approved_by = "Demo Approver"
+    inv.approved_by = approved_by or "Demo Approver"
     inv.approved_at = now
     inv.ebs_ap_status = "PENDING"
 
@@ -489,6 +495,8 @@ async def reject_invoice(
         raise ValidationError(
             f"Cannot reject invoice {inv_id}: current status is {inv.status}"
         )
+
+    validate_transition("invoice", inv.status, "REJECTED")
 
     now = datetime.now(timezone.utc)
     inv.status = "REJECTED"
@@ -553,6 +561,7 @@ async def simulate_processing(
         )
 
     old_status = inv.status
+    validate_transition("invoice", old_status, next_status)
     inv.status = next_status
 
     # Populate simulated metadata based on the transition

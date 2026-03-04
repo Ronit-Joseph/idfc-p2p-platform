@@ -14,7 +14,7 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db, get_current_user
+from backend.dependencies import get_db, get_current_user, require_role, paginate
 from backend.modules.budgets.schemas import BudgetCheckResponse, BudgetResponse
 from backend.modules.budgets import service
 
@@ -25,14 +25,17 @@ router = APIRouter(prefix="/api/budgets", tags=["budgets"])
 # GET  /api/budgets
 # ---------------------------------------------------------------------------
 
-@router.get("", response_model=List[BudgetResponse])
+@router.get("")
 async def list_budgets(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _user: Dict[str, Any] = Depends(get_current_user),
-) -> List[BudgetResponse]:
+):
     """Return all department budgets."""
     budgets = await service.list_budgets(db)
-    return [BudgetResponse.model_validate(b) for b in budgets]
+    results = [BudgetResponse.model_validate(b) for b in budgets]
+    return paginate(results, skip, limit)
 
 
 # ---------------------------------------------------------------------------
@@ -44,7 +47,7 @@ async def check_budget(
     dept: str = Query(..., description="Department code (e.g. TECH)"),
     amount: float = Query(..., description="Requested amount to validate"),
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("DEPARTMENT_HEAD")),
 ) -> BudgetCheckResponse:
     """Check whether a requested amount is within budget for a department.
 

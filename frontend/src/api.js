@@ -19,6 +19,7 @@ export const rejectPR = (id) => api.patch(`/purchase-requests/${id}/reject`).the
 
 export const getPOs = () => api.get('/purchase-orders').then(r => r.data)
 export const getPO = (id) => api.get(`/purchase-orders/${id}`).then(r => r.data)
+export const createGRN = (poId, body) => api.post(`/purchase-orders/${poId}/grn`, body).then(r => r.data)
 
 export const getInvoices = (status) => api.get('/invoices', { params: status ? { status } : {} }).then(r => r.data)
 export const getInvoice = (id) => api.get(`/invoices/${id}`).then(r => r.data)

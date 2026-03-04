@@ -35,7 +35,7 @@ export default function Documents() {
   const load = () => {
     setLoading(true)
     Promise.all([getDocuments(), getDocumentSummary()])
-      .then(([d, s]) => { setDocuments(d); setSummary(s); setLoading(false) })
+      .then(([d, s]) => { setDocuments(d.items || []); setSummary(s); setLoading(false) })
       .catch(() => setLoading(false))
   }
 

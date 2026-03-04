@@ -32,8 +32,8 @@ export default function Suppliers() {
   const [filter, setFilter] = useState('ALL')
 
   useEffect(() => {
-    getSuppliers().then(setSuppliers)
-    getVendorEvents().then(setEvents)
+    getSuppliers().then(res => setSuppliers(res.items || []))
+    getVendorEvents().then(res => setEvents(res.items || []))
   }, [])
 
   const filtered = filter === 'ALL' ? suppliers

@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db, get_current_user
+from backend.dependencies import get_db, get_current_user, paginate
 from backend.modules.audit.schemas import AuditLogResponse, AuditSummaryResponse
 from backend.modules.audit import service
 
@@ -67,13 +67,16 @@ async def get_summary(
 # GET  /api/audit/entity/{entity_type}/{entity_id}
 # ---------------------------------------------------------------------------
 
-@router.get("/entity/{entity_type}/{entity_id}", response_model=List[AuditLogResponse])
+@router.get("/entity/{entity_type}/{entity_id}")
 async def entity_history(
     entity_type: str,
     entity_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _user: Dict[str, Any] = Depends(get_current_user),
-) -> List[AuditLogResponse]:
+):
     """Get full audit trail for a specific entity (e.g. all events for INV001)."""
     logs = await service.get_entity_history(db, entity_type, entity_id)
-    return [AuditLogResponse.model_validate(log) for log in logs]
+    results = [AuditLogResponse.model_validate(log) for log in logs]
+    return paginate(results, skip, limit)

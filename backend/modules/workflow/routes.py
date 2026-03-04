@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db, get_current_user
+from backend.dependencies import get_db, get_current_user, require_role, paginate
 from backend.modules.workflow.schemas import (
     ApprovalMatrixResponse,
     ApprovalMatrixCreate,
@@ -30,14 +30,17 @@ router = APIRouter(prefix="/api/workflow", tags=["workflow"])
 # GET  /api/workflow/matrices
 # ---------------------------------------------------------------------------
 
-@router.get("/matrices", response_model=List[ApprovalMatrixResponse])
+@router.get("/matrices")
 async def list_matrices(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _user: Dict[str, Any] = Depends(get_current_user),
-) -> List[ApprovalMatrixResponse]:
+) -> Dict[str, Any]:
     """Return all approval matrix rules."""
     matrices = await service.list_matrices(db)
-    return [ApprovalMatrixResponse.model_validate(m) for m in matrices]
+    results = [ApprovalMatrixResponse.model_validate(m) for m in matrices]
+    return paginate(results, skip, limit)
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +51,7 @@ async def list_matrices(
 async def create_matrix(
     body: ApprovalMatrixCreate,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("ADMIN")),
 ) -> ApprovalMatrixResponse:
     """Create a new approval matrix rule."""
     result = await service.create_matrix(db, body.model_dump())
@@ -59,15 +62,18 @@ async def create_matrix(
 # GET  /api/workflow/pending
 # ---------------------------------------------------------------------------
 
-@router.get("/pending", response_model=List[ApprovalInstanceResponse])
+@router.get("/pending")
 async def list_pending(
     role: Optional[str] = Query(None, description="Filter by approver role"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _user: Dict[str, Any] = Depends(get_current_user),
-) -> List[ApprovalInstanceResponse]:
+) -> Dict[str, Any]:
     """List all pending approval requests, optionally by role."""
     items = await service.list_pending_approvals(db, approver_role=role)
-    return [ApprovalInstanceResponse.model_validate(i) for i in items]
+    results = [ApprovalInstanceResponse.model_validate(i) for i in items]
+    return paginate(results, skip, limit)
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +84,7 @@ async def list_pending(
 async def create_approval_request(
     body: ApprovalRequestCreate,
     db: AsyncSession = Depends(get_db),
-    user: Dict[str, Any] = Depends(get_current_user),
+    user: Dict[str, Any] = Depends(require_role("DEPARTMENT_HEAD")),
 ) -> ApprovalInstanceResponse:
     """Submit an entity for approval."""
     result = await service.create_approval_request(
@@ -137,7 +143,7 @@ async def approve(
     instance_id: str,
     body: ApprovalActionRequest,
     db: AsyncSession = Depends(get_db),
-    user: Dict[str, Any] = Depends(get_current_user),
+    user: Dict[str, Any] = Depends(require_role("DEPARTMENT_HEAD")),
 ) -> ApprovalInstanceResponse:
     """Approve the current step of an approval instance."""
     try:
@@ -160,7 +166,7 @@ async def reject(
     instance_id: str,
     body: ApprovalActionRequest,
     db: AsyncSession = Depends(get_db),
-    user: Dict[str, Any] = Depends(get_current_user),
+    user: Dict[str, Any] = Depends(require_role("DEPARTMENT_HEAD")),
 ) -> ApprovalInstanceResponse:
     """Reject the current step — entire approval is rejected."""
     try:

@@ -29,7 +29,7 @@ export default function Workflow() {
   const load = () => {
     setLoading(true)
     Promise.all([getApprovalMatrices(), getPendingApprovals()])
-      .then(([m, p]) => { setMatrices(m); setPending(p); setLoading(false) })
+      .then(([m, p]) => { setMatrices(m.items || []); setPending(p.items || []); setLoading(false) })
       .catch(() => setLoading(false))
   }
 

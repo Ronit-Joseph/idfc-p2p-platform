@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.modules.purchase_orders.models import (
@@ -193,6 +193,97 @@ async def _build_po_summary(
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
+async def create_grn(
+    db: AsyncSession,
+    po_number: str,
+    data: Dict[str, Any],
+    received_by: str = "Unknown",
+) -> Dict[str, Any]:
+    """Create a GRN for a Purchase Order.
+
+    Auto-generates grn_number (GRN2024-NNN), creates line items,
+    updates PO status to PARTIALLY_RECEIVED or RECEIVED, and
+    updates POLineItem.grn_quantity.
+    """
+    # Find PO by number
+    result = await db.execute(
+        select(PurchaseOrder).where(PurchaseOrder.po_number == po_number)
+    )
+    po = result.scalar_one_or_none()
+    if po is None:
+        raise ValueError(f"PO {po_number} not found")
+
+    if po.status in ("CLOSED", "DRAFT"):
+        raise ValueError(f"Cannot create GRN for PO in {po.status} status")
+
+    # Generate GRN number
+    count_result = await db.execute(
+        select(sa_func.count()).select_from(GoodsReceiptNote)
+    )
+    count = count_result.scalar() or 0
+    grn_number = f"GRN2024-{count + 1:03d}"
+
+    # Create GRN
+    from datetime import date
+    grn = GoodsReceiptNote(
+        grn_number=grn_number,
+        po_id=po.id,
+        received_date=data.get("received_date") or date.today().isoformat(),
+        received_by=data.get("received_by") or received_by,
+        status="PARTIAL",
+        notes=data.get("notes"),
+    )
+    db.add(grn)
+    await db.flush()
+
+    # Create GRN line items
+    items = data.get("items", [])
+    po_line_items = await _load_po_line_items(db, po.id)
+
+    # If no items provided, create from PO line items (full receipt)
+    if not items and po_line_items:
+        items = [
+            {"description": li.description, "po_quantity": li.quantity,
+             "received_quantity": li.quantity, "unit": li.unit}
+            for li in po_line_items
+        ]
+
+    for item_data in items:
+        grn_item = GRNLineItem(
+            grn_id=grn.id,
+            description=item_data.get("description", ""),
+            po_quantity=item_data.get("po_quantity", 0),
+            received_quantity=item_data.get("received_quantity", 0),
+            unit=item_data.get("unit"),
+        )
+        db.add(grn_item)
+
+    # Update PO line item grn_quantity
+    for item_data in items:
+        for pli in po_line_items:
+            if pli.description == item_data.get("description"):
+                pli.grn_quantity = (pli.grn_quantity or 0) + item_data.get("received_quantity", 0)
+                break
+
+    # Determine if all items fully received
+    await db.flush()
+    all_received = all(
+        pli.grn_quantity >= pli.quantity for pli in po_line_items
+    ) if po_line_items else False
+
+    if all_received:
+        grn.status = "COMPLETE"
+        po.status = "RECEIVED"
+    else:
+        po.status = "PARTIALLY_RECEIVED"
+
+    await db.commit()
+
+    # Build response
+    grn_items = await _load_grn_line_items(db, grn.id)
+    return _build_grn_dict(grn, grn_items, po.po_number)
+
 
 async def list_pos(db: AsyncSession) -> List[Dict[str, Any]]:
     """Return all Purchase Orders as legacy-shaped dicts.

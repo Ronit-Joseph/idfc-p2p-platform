@@ -13,7 +13,7 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db, get_current_user
+from backend.dependencies import get_db, get_current_user, require_role, paginate
 from backend.modules.matching.schemas import (
     MatchResultResponse,
     MatchingExceptionResponse,
@@ -30,14 +30,17 @@ router = APIRouter(prefix="/api/matching", tags=["matching"])
 # GET  /api/matching/results
 # ---------------------------------------------------------------------------
 
-@router.get("/results", response_model=List[MatchResultResponse])
+@router.get("/results")
 async def list_results(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _user: Dict[str, Any] = Depends(get_current_user),
-) -> List[MatchResultResponse]:
+) -> Dict[str, Any]:
     """List all match results."""
     items = await service.list_match_results(db)
-    return [MatchResultResponse.model_validate(i) for i in items]
+    results = [MatchResultResponse.model_validate(i) for i in items]
+    return paginate(results, skip, limit)
 
 
 # ---------------------------------------------------------------------------
@@ -63,7 +66,7 @@ async def run_match(
     invoice_id: str,
     body: RunMatchRequest,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("PROCUREMENT_MANAGER")),
 ) -> MatchResultResponse:
     """Run 2-way or 3-way matching for an invoice."""
     try:
@@ -77,15 +80,18 @@ async def run_match(
 # GET  /api/matching/exceptions
 # ---------------------------------------------------------------------------
 
-@router.get("/exceptions", response_model=List[MatchingExceptionResponse])
+@router.get("/exceptions")
 async def list_exceptions(
     open_only: bool = Query(True, description="Only show unresolved exceptions"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _user: Dict[str, Any] = Depends(get_current_user),
-) -> List[MatchingExceptionResponse]:
+) -> Dict[str, Any]:
     """List matching exceptions (exception queue)."""
     items = await service.list_exceptions(db, open_only=open_only)
-    return [MatchingExceptionResponse.model_validate(i) for i in items]
+    results = [MatchingExceptionResponse.model_validate(i) for i in items]
+    return paginate(results, skip, limit)
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +103,7 @@ async def resolve_exception(
     exc_id: str,
     body: ResolveExceptionRequest,
     db: AsyncSession = Depends(get_db),
-    user: Dict[str, Any] = Depends(get_current_user),
+    user: Dict[str, Any] = Depends(require_role("FINANCE_HEAD")),
 ) -> MatchingExceptionResponse:
     """Resolve a matching exception."""
     try:

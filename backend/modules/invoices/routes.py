@@ -19,10 +19,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db, get_current_user
+from backend.dependencies import get_db, get_current_user, require_role, paginate
 from backend.exceptions import NotFoundError
 from backend.modules.invoices.schemas import (
     InvoiceDetailResponse,
@@ -37,12 +37,14 @@ router = APIRouter(prefix="/api/invoices", tags=["invoices"])
 # GET  /api/invoices
 # ---------------------------------------------------------------------------
 
-@router.get("", response_model=List[InvoiceListItem])
+@router.get("")
 async def list_invoices(
     status: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _user: Dict[str, Any] = Depends(get_current_user),
-) -> List[InvoiceListItem]:
+):
     """Return all invoices with resolved supplier/PO/GRN codes.
 
     Optionally filter by ``status`` query parameter.
@@ -50,7 +52,7 @@ async def list_invoices(
     inv_dicts = await service.list_invoices(db)
     if status:
         inv_dicts = [d for d in inv_dicts if d.get("status") == status]
-    return [InvoiceListItem.model_validate(d) for d in inv_dicts]
+    return paginate([InvoiceListItem.model_validate(d) for d in inv_dicts], skip, limit)
 
 
 # ---------------------------------------------------------------------------
@@ -83,15 +85,17 @@ async def get_invoice(
 async def approve_invoice(
     inv_id: str,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    user: Dict[str, Any] = Depends(require_role("FINANCE_HEAD")),
 ) -> InvoiceDetailResponse:
     """Approve an invoice that is currently PENDING_APPROVAL or MATCHED.
 
     Sets status to APPROVED, records approver, and marks EBS AP as PENDING.
     Returns 422 (ValidationError) if the invoice is not in an approvable
-    status.
+    status or if the approver is the same as the uploader (maker-checker).
     """
-    detail = await service.approve_invoice(db, inv_id)
+    detail = await service.approve_invoice(
+        db, inv_id, approved_by=user.get("name", "Unknown"),
+    )
     return InvoiceDetailResponse.model_validate(detail)
 
 
@@ -103,7 +107,7 @@ async def approve_invoice(
 async def reject_invoice(
     inv_id: str,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("FINANCE_HEAD")),
 ) -> InvoiceDetailResponse:
     """Reject an invoice.
 
@@ -122,7 +126,7 @@ async def reject_invoice(
 async def simulate_processing(
     inv_id: str,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("FINANCE_HEAD")),
 ) -> InvoiceDetailResponse:
     """Simulate the invoice processing pipeline by advancing status one step.
 

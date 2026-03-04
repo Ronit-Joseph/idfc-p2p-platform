@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db, get_current_user
+from backend.dependencies import get_db, get_current_user, require_role, paginate
 from backend.modules.documents.schemas import (
     DocumentResponse,
     DocumentCreateRequest,
@@ -28,19 +28,22 @@ router = APIRouter(prefix="/api/documents", tags=["documents"])
 # GET  /api/documents
 # ---------------------------------------------------------------------------
 
-@router.get("", response_model=List[DocumentResponse])
+@router.get("")
 async def list_documents(
     entity_type: Optional[str] = Query(None),
     entity_id: Optional[str] = Query(None),
     document_type: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _user: Dict[str, Any] = Depends(get_current_user),
-) -> List[DocumentResponse]:
+) -> Dict[str, Any]:
     """List documents with optional filters."""
     items = await service.list_documents(
         db, entity_type=entity_type, entity_id=entity_id, document_type=document_type,
     )
-    return [DocumentResponse.model_validate(i) for i in items]
+    results = [DocumentResponse.model_validate(i) for i in items]
+    return paginate(results, skip, limit)
 
 
 # ---------------------------------------------------------------------------
@@ -61,16 +64,19 @@ async def get_summary(
 # GET  /api/documents/entity/{entity_type}/{entity_id}
 # ---------------------------------------------------------------------------
 
-@router.get("/entity/{entity_type}/{entity_id}", response_model=List[DocumentResponse])
+@router.get("/entity/{entity_type}/{entity_id}")
 async def entity_documents(
     entity_type: str,
     entity_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _user: Dict[str, Any] = Depends(get_current_user),
-) -> List[DocumentResponse]:
+) -> Dict[str, Any]:
     """Get all documents for a specific entity."""
     items = await service.get_entity_documents(db, entity_type, entity_id)
-    return [DocumentResponse.model_validate(i) for i in items]
+    results = [DocumentResponse.model_validate(i) for i in items]
+    return paginate(results, skip, limit)
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +87,7 @@ async def entity_documents(
 async def create_document(
     body: DocumentCreateRequest,
     db: AsyncSession = Depends(get_db),
-    user: Dict[str, Any] = Depends(get_current_user),
+    user: Dict[str, Any] = Depends(require_role("DEPARTMENT_HEAD")),
 ) -> DocumentResponse:
     """Register a new document (metadata). File upload handled separately."""
     result = await service.create_document(
@@ -107,7 +113,7 @@ async def create_document(
 async def delete_document(
     doc_id: str,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("PROCUREMENT_MANAGER")),
 ) -> Dict[str, Any]:
     """Soft-delete a document."""
     deleted = await service.delete_document(db, doc_id)

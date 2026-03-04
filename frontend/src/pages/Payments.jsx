@@ -35,7 +35,7 @@ export default function Payments() {
   const load = () => {
     setLoading(true)
     Promise.all([getPayments(), getPaymentRuns(), getPaymentSummary()])
-      .then(([p, r, s]) => { setPayments(p); setRuns(r); setSummary(s); setLoading(false) })
+      .then(([p, r, s]) => { setPayments(p.items || []); setRuns(r.items || []); setSummary(s); setLoading(false) })
       .catch(() => setLoading(false))
   }
 

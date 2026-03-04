@@ -30,7 +30,7 @@ export default function Invoices() {
   const [filter, setFilter] = useState('ALL')
   const nav = useNavigate()
 
-  useEffect(() => { getInvoices().then(setInvoices) }, [])
+  useEffect(() => { getInvoices().then(res => setInvoices(res.items || [])) }, [])
 
   const filtered = filter === 'ALL' ? invoices : invoices.filter(i => i.status === filter)
   const statuses = ['ALL', 'CAPTURED', 'EXTRACTED', 'VALIDATED', 'MATCHED', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'POSTED_TO_EBS']

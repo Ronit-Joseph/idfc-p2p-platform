@@ -45,7 +45,7 @@ export default function Matching() {
   const load = () => {
     setLoading(true)
     Promise.all([getMatchResults(), getMatchSummary(), getMatchExceptions()])
-      .then(([r, s, e]) => { setResults(r); setSummary(s); setExceptions(e); setLoading(false) })
+      .then(([r, s, e]) => { setResults(r.items || []); setSummary(s); setExceptions(e.items || []); setLoading(false) })
       .catch(() => setLoading(false))
   }
 

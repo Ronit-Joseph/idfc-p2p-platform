@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db, get_current_user
+from backend.dependencies import get_db, get_current_user, require_role
 from backend.modules.notifications.schemas import (
     NotificationResponse,
     NotificationCreate,
@@ -73,7 +73,7 @@ async def unread_count(
 async def create_notification(
     body: NotificationCreate,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("ADMIN")),
 ) -> NotificationResponse:
     """Create a notification (admin/system use)."""
     result = await service.create_notification(

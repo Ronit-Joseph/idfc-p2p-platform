@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db, get_current_user
+from backend.dependencies import get_db, get_current_user, require_role, paginate
 from backend.modules.tds.schemas import (
     TDSDeductionResponse,
     TDSCreateRequest,
@@ -28,17 +28,20 @@ router = APIRouter(prefix="/api/tds", tags=["tds"])
 # GET  /api/tds
 # ---------------------------------------------------------------------------
 
-@router.get("", response_model=List[TDSDeductionResponse])
+@router.get("")
 async def list_deductions(
     fiscal_year: Optional[str] = Query(None),
     quarter: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _user: Dict[str, Any] = Depends(get_current_user),
-) -> List[TDSDeductionResponse]:
+) -> Dict[str, Any]:
     """List TDS deductions with optional filters."""
     items = await service.list_deductions(db, fiscal_year=fiscal_year, quarter=quarter, status=status)
-    return [TDSDeductionResponse.model_validate(i) for i in items]
+    results = [TDSDeductionResponse.model_validate(i) for i in items]
+    return paginate(results, skip, limit)
 
 
 # ---------------------------------------------------------------------------
@@ -63,7 +66,7 @@ async def get_summary(
 async def create_deduction(
     body: TDSCreateRequest,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("FINANCE_HEAD")),
 ) -> TDSDeductionResponse:
     """Create a TDS deduction for an invoice."""
     try:
@@ -85,7 +88,7 @@ async def deposit(
     challan_number: str = Query(..., description="Government challan number"),
     bsr_code: Optional[str] = Query(None, description="BSR code"),
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("FINANCE_HEAD")),
 ) -> TDSDeductionResponse:
     """Record TDS deposit against a challan."""
     try:
@@ -103,7 +106,7 @@ async def deposit(
 async def generate_form16a(
     deduction_id: str,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("FINANCE_HEAD")),
 ) -> TDSDeductionResponse:
     """Generate Form 16A certificate for a deposited TDS deduction."""
     try:

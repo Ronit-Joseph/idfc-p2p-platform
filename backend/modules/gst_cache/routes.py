@@ -16,7 +16,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db, get_current_user
+from backend.dependencies import get_db, get_current_user, require_role
 from backend.modules.gst_cache.schemas import (
     GSTCacheListResponse,
     GSTCacheSummary,
@@ -52,7 +52,7 @@ async def list_gst_cache(
 @router.post("/sync", response_model=GSTSyncResponse)
 async def sync_gst_cache(
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("FINANCE_HEAD")),
 ) -> GSTSyncResponse:
     """Trigger a batch sync of GSTIN data from Cygnet GSP.
 

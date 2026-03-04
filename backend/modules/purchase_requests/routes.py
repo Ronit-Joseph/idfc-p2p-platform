@@ -11,11 +11,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db, get_current_user
+from backend.dependencies import get_db, get_current_user, require_role, paginate
 from backend.exceptions import NotFoundError
 from backend.modules.budgets.models import Budget
 from backend.modules.purchase_requests.schemas import (
@@ -32,14 +32,16 @@ router = APIRouter(prefix="/api/purchase-requests", tags=["purchase-requests"])
 # GET  /api/purchase-requests
 # ---------------------------------------------------------------------------
 
-@router.get("", response_model=List[PRResponse])
+@router.get("")
 async def list_purchase_requests(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _user: Dict[str, Any] = Depends(get_current_user),
-) -> List[PRResponse]:
+):
     """Return all purchase requests with their line items."""
     prs = await service.list_prs(db)
-    return [PRResponse.model_validate(pr) for pr in prs]
+    return paginate([PRResponse.model_validate(pr) for pr in prs], skip, limit)
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +95,7 @@ async def get_purchase_request(
 async def create_purchase_request(
     payload: PRCreate,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("DEPARTMENT_HEAD")),
 ) -> PRResponse:
     """Create a new purchase request.
 
@@ -112,14 +114,17 @@ async def create_purchase_request(
 async def approve_purchase_request(
     pr_id: str,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    user: Dict[str, Any] = Depends(require_role("PROCUREMENT_MANAGER")),
 ) -> PRResponse:
     """Approve a purchase request that is currently PENDING_APPROVAL.
 
     Returns 400 (via ValidationError → 422) if the PR is not in the
-    correct status.
+    correct status or if the approver is the same as the requester
+    (maker-checker).
     """
-    pr = await service.approve_pr(db, pr_id)
+    pr = await service.approve_pr(
+        db, pr_id, approved_by=user.get("name", "Unknown"),
+    )
     return PRResponse.model_validate(pr)
 
 
@@ -131,7 +136,7 @@ async def approve_purchase_request(
 async def reject_purchase_request(
     pr_id: str,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("PROCUREMENT_MANAGER")),
 ) -> PRResponse:
     """Reject a purchase request."""
     pr = await service.reject_pr(db, pr_id)

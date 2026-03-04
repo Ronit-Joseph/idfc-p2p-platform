@@ -41,7 +41,7 @@ export default function PurchaseRequests() {
     justification: '', requester: 'Demo User'
   })
 
-  const load = () => getPRs().then(setPRs)
+  const load = () => getPRs().then(res => setPRs(res.items || []))
   useEffect(() => { load() }, [])
 
   const filtered = filter === 'ALL' ? prs : prs.filter(p => p.status === filter)

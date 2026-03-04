@@ -14,10 +14,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db, get_current_user
+from backend.dependencies import get_db, get_current_user, require_role, paginate
 from backend.modules.ai_agents.schemas import AIInsightResponse, AIInsightApplyResponse
 from backend.modules.ai_agents import service
 
@@ -28,11 +28,13 @@ router = APIRouter(prefix="/api/ai-agents", tags=["ai-agents"])
 # GET  /api/ai-agents/insights
 # ---------------------------------------------------------------------------
 
-@router.get("/insights", response_model=List[AIInsightResponse])
+@router.get("/insights")
 async def list_insights(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _user: Dict[str, Any] = Depends(get_current_user),
-) -> List[AIInsightResponse]:
+):
     """Return all AI agent insights.
 
     Each insight's ``id`` field corresponds to the ``insight_code`` column
@@ -40,7 +42,8 @@ async def list_insights(
     the legacy API contract.
     """
     insights = await service.list_insights(db)
-    return [AIInsightResponse.model_validate(i) for i in insights]
+    results = [AIInsightResponse.model_validate(i) for i in insights]
+    return paginate(results, skip, limit)
 
 
 # ---------------------------------------------------------------------------
@@ -51,7 +54,7 @@ async def list_insights(
 async def apply_insight(
     insight_id: str,
     db: AsyncSession = Depends(get_db),
-    _user: Dict[str, Any] = Depends(get_current_user),
+    _user: Dict[str, Any] = Depends(require_role("PROCUREMENT_MANAGER")),
 ) -> AIInsightApplyResponse:
     """Apply an AI agent insight / recommendation.
 

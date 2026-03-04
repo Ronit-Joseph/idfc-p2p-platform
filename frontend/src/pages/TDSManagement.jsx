@@ -35,7 +35,7 @@ export default function TDSManagement() {
   const load = () => {
     setLoading(true)
     Promise.all([getTDSDeductions(), getTDSSummary(), getTDSRates()])
-      .then(([d, s, r]) => { setDeductions(d); setSummary(s); setRates(r); setLoading(false) })
+      .then(([d, s, r]) => { setDeductions(d.items || []); setSummary(s); setRates(r); setLoading(false) })
       .catch(() => setLoading(false))
   }
 

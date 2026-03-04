@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.event_bus import Event, event_bus
 from backend.exceptions import NotFoundError, ValidationError
 from backend.modules.budgets.models import Budget
+from backend.state_machines import validate_transition, validate_maker_checker
 from backend.modules.purchase_requests.models import PRLineItem, PurchaseRequest
 from backend.modules.purchase_requests.schemas import PRCreate
 
@@ -195,10 +196,13 @@ async def create_pr(db: AsyncSession, data: PRCreate) -> PurchaseRequest:
     return pr
 
 
-async def approve_pr(db: AsyncSession, pr_number: str) -> PurchaseRequest:
+async def approve_pr(
+    db: AsyncSession, pr_number: str, approved_by: Optional[str] = None,
+) -> PurchaseRequest:
     """Approve a PR that is currently PENDING_APPROVAL.
 
-    Raises ``ValidationError`` if the PR is not in PENDING_APPROVAL status.
+    Raises ``ValidationError`` if the PR is not in PENDING_APPROVAL status
+        or if the approver is the same as the requester (maker-checker).
     Raises ``NotFoundError`` if the PR does not exist.
     """
     pr = await get_pr_by_number(db, pr_number)
@@ -211,9 +215,11 @@ async def approve_pr(db: AsyncSession, pr_number: str) -> PurchaseRequest:
             f"expected PENDING_APPROVAL"
         )
 
+    validate_transition("purchase_request", pr.status, "APPROVED")
+    validate_maker_checker(pr.requester, approved_by, "purchase_request")
     pr.status = "APPROVED"
     pr.approved_at = datetime.utcnow()
-    pr.approver = "Demo Approver"
+    pr.approver = approved_by or "Demo Approver"
 
     await db.flush()
     await db.refresh(pr)
@@ -238,6 +244,7 @@ async def reject_pr(db: AsyncSession, pr_number: str) -> PurchaseRequest:
     if pr is None:
         raise NotFoundError(f"Purchase Request {pr_number} not found")
 
+    validate_transition("purchase_request", pr.status, "REJECTED")
     pr.status = "REJECTED"
     pr.rejected_at = datetime.utcnow()
     pr.rejection_reason = "Rejected via demo"

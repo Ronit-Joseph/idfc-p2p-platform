@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.config import settings
 from backend.database import get_db as _get_db
+from backend.modules.auth.constants import ROLE_HIERARCHY
 
 # ---------------------------------------------------------------------------
 # Database dependency
@@ -64,3 +65,51 @@ async def get_current_user(
         )
 
     return payload
+
+
+# ---------------------------------------------------------------------------
+# Role-based access control dependency
+# ---------------------------------------------------------------------------
+
+
+def require_role(min_role: str):
+    """Dependency factory: returns a dependency that enforces a minimum role.
+
+    Usage:
+        @router.post("/", dependencies=[Depends(require_role("PROCUREMENT_MANAGER"))])
+        async def create_something(...): ...
+
+    Or to also receive the user dict:
+        async def endpoint(user=Depends(require_role("FINANCE_HEAD"))): ...
+    """
+    required_level = ROLE_HIERARCHY.get(min_role, 0)
+
+    async def _check_role(
+        current_user: Dict[str, Any] = Depends(get_current_user),
+    ) -> Dict[str, Any]:
+        user_role = (current_user.get("role") or "").upper()
+        user_level = ROLE_HIERARCHY.get(user_role, 0)
+        if user_level < required_level:
+            from backend.exceptions import AuthorizationError
+            raise AuthorizationError(
+                f"Role {min_role} or higher required. Your role: {user_role}"
+            )
+        return current_user
+
+    return _check_role
+
+
+# ---------------------------------------------------------------------------
+# Pagination helper
+# ---------------------------------------------------------------------------
+
+
+def paginate(items: list, skip: int = 0, limit: int = 50) -> Dict[str, Any]:
+    """Apply pagination to a list and return a standardized response.
+
+    Returns:
+        {"items": [...], "total": N, "skip": skip, "limit": limit}
+    """
+    total = len(items)
+    sliced = items[skip : skip + limit]
+    return {"items": sliced, "total": total, "skip": skip, "limit": limit}

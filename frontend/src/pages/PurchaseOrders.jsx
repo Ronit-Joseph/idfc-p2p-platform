@@ -18,7 +18,7 @@ export default function PurchaseOrders() {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => { getPOs().then(setPOs) }, [])
+  useEffect(() => { getPOs().then(res => setPOs(res.items || [])) }, [])
 
   const loadDetail = (id) => {
     if (detail?.id === id) { setDetail(null); return }

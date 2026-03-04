@@ -6,12 +6,12 @@ Endpoints: list, detail, create, update, terminate, expiring.
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db
+from backend.dependencies import get_db, get_current_user, require_role
 from backend.modules.contracts import service
 from backend.modules.contracts.schemas import ContractCreate, ContractUpdate
 
@@ -23,6 +23,7 @@ async def list_contracts(
     status: Optional[str] = None,
     contract_type: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
+    _user: Dict[str, Any] = Depends(get_current_user),
 ):
     contracts = await service.list_contracts(db, status=status, contract_type=contract_type)
     items = []
@@ -69,6 +70,7 @@ async def list_contracts(
 async def expiring_contracts(
     days: int = 30,
     db: AsyncSession = Depends(get_db),
+    _user: Dict[str, Any] = Depends(get_current_user),
 ):
     contracts = await service.get_expiring_contracts(db, days=days)
     return [{
@@ -82,7 +84,7 @@ async def expiring_contracts(
 
 
 @router.get("/{contract_id}")
-async def get_contract(contract_id: str, db: AsyncSession = Depends(get_db)):
+async def get_contract(contract_id: str, db: AsyncSession = Depends(get_db), _user: Dict[str, Any] = Depends(get_current_user)):
     c = await service.get_contract(db, contract_id)
     if not c:
         raise HTTPException(status_code=404, detail="Contract not found")
@@ -107,13 +109,13 @@ async def get_contract(contract_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("", status_code=201)
-async def create_contract(body: ContractCreate, db: AsyncSession = Depends(get_db)):
+async def create_contract(body: ContractCreate, db: AsyncSession = Depends(get_db), _user: Dict[str, Any] = Depends(require_role("PROCUREMENT_MANAGER"))):
     c = await service.create_contract(db, body.model_dump())
     return {"id": c.contract_number, "contract_number": c.contract_number, "status": c.status}
 
 
 @router.patch("/{contract_id}")
-async def update_contract(contract_id: str, body: ContractUpdate, db: AsyncSession = Depends(get_db)):
+async def update_contract(contract_id: str, body: ContractUpdate, db: AsyncSession = Depends(get_db), _user: Dict[str, Any] = Depends(require_role("PROCUREMENT_MANAGER"))):
     c = await service.update_contract(db, contract_id, body.model_dump(exclude_unset=True))
     if not c:
         raise HTTPException(status_code=404, detail="Contract not found")
@@ -121,7 +123,7 @@ async def update_contract(contract_id: str, body: ContractUpdate, db: AsyncSessi
 
 
 @router.post("/{contract_id}/terminate")
-async def terminate_contract(contract_id: str, db: AsyncSession = Depends(get_db)):
+async def terminate_contract(contract_id: str, db: AsyncSession = Depends(get_db), _user: Dict[str, Any] = Depends(require_role("FINANCE_HEAD"))):
     c = await service.terminate_contract(db, contract_id)
     if not c:
         raise HTTPException(status_code=404, detail="Contract not found")

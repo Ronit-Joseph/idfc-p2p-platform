@@ -10,10 +10,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.dependencies import get_db, get_current_user
+from backend.dependencies import get_db, get_current_user, require_role, paginate
 from backend.modules.payments.schemas import (
     PaymentResponse,
     PaymentRunResponse,
@@ -29,14 +29,16 @@ router = APIRouter(prefix="/api/payments", tags=["payments"])
 # GET  /api/payments
 # ---------------------------------------------------------------------------
 
-@router.get("", response_model=List[PaymentResponse])
+@router.get("")
 async def list_payments(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _user: Dict[str, Any] = Depends(get_current_user),
-) -> List[PaymentResponse]:
+):
     """List all individual payments."""
     items = await service.list_payments(db)
-    return [PaymentResponse.model_validate(i) for i in items]
+    return paginate([PaymentResponse.model_validate(i) for i in items], skip, limit)
 
 
 # ---------------------------------------------------------------------------
@@ -57,14 +59,16 @@ async def payment_summary(
 # GET  /api/payments/runs
 # ---------------------------------------------------------------------------
 
-@router.get("/runs", response_model=List[PaymentRunResponse])
+@router.get("/runs")
 async def list_runs(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
     _user: Dict[str, Any] = Depends(get_current_user),
-) -> List[PaymentRunResponse]:
+):
     """List all payment runs."""
     items = await service.list_payment_runs(db)
-    return [PaymentRunResponse.model_validate(i) for i in items]
+    return paginate([PaymentRunResponse.model_validate(i) for i in items], skip, limit)
 
 
 # ---------------------------------------------------------------------------
@@ -75,7 +79,7 @@ async def list_runs(
 async def create_run(
     body: CreatePaymentRunRequest,
     db: AsyncSession = Depends(get_db),
-    user: Dict[str, Any] = Depends(get_current_user),
+    user: Dict[str, Any] = Depends(require_role("FINANCE_HEAD")),
 ) -> PaymentRunResponse:
     """Create a new payment run for a batch of invoices."""
     try:
@@ -99,7 +103,7 @@ async def create_run(
 async def process_run(
     run_number: str,
     db: AsyncSession = Depends(get_db),
-    user: Dict[str, Any] = Depends(get_current_user),
+    user: Dict[str, Any] = Depends(require_role("FINANCE_HEAD")),
 ) -> PaymentRunResponse:
     """Advance a payment run one step (DRAFT→SCHEDULED→PROCESSING→COMPLETED)."""
     try:

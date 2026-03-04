@@ -135,6 +135,30 @@ class GRNResponse(BaseModel):
 # PO response schemas
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# GRN creation schemas
+# ---------------------------------------------------------------------------
+
+class GRNLineItemCreate(BaseModel):
+    """Input for a single GRN line item."""
+    description: str
+    po_quantity: float
+    received_quantity: float
+    unit: Optional[str] = None
+
+
+class GRNCreate(BaseModel):
+    """Input for creating a new Goods Receipt Note."""
+    received_date: Optional[str] = None
+    received_by: Optional[str] = None
+    notes: Optional[str] = None
+    items: List[GRNLineItemCreate] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# PO response schemas
+# ---------------------------------------------------------------------------
+
 class POResponse(BaseModel):
     """Purchase Order summary — used in list endpoint.
 
